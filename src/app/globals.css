@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  @apply bg-dusk-bg text-white antialiased;
+  background-image:
+    radial-gradient(circle at 85% 9%, rgba(168,141,255,.17), transparent 30%),
+    radial-gradient(circle at 14% 22%, rgba(97,232,255,.08), transparent 23%),
+    linear-gradient(180deg,#06101a,#0a1220 55%,#07101b);
+}
+
+@layer components {
+  .panel { @apply rounded-[28px] border border-dusk-line bg-dusk-panel/90 p-6 shadow-dusk; }
+  .card { @apply rounded-2xl border border-dusk-line bg-white/[0.025] p-5; }
+  .eyebrow { @apply mb-3 text-xs font-black uppercase tracking-[.18em] text-dusk-aqua; }
+  .tag { @apply mt-4 inline-block rounded-full bg-dusk-purple/10 px-3 py-2 text-xs font-black uppercase tracking-wide text-purple-200; }
+  .button-primary { @apply inline-flex rounded-xl bg-dusk-aqua px-5 py-3 font-black text-dusk-bg shadow-dusk transition hover:-translate-y-0.5; }
+  .button-secondary { @apply inline-flex rounded-xl border border-dusk-line bg-white/5 px-5 py-3 font-black transition hover:border-dusk-aqua/30; }
+  .form-label { @apply grid gap-2 text-sm font-bold; }
+  .form-input { @apply w-full rounded-xl border border-dusk-line bg-white/[0.03] px-4 py-3 text-white outline-none transition focus:border-dusk-aqua/40; }
+}
+
+@keyframes dash {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -120; }
+}
