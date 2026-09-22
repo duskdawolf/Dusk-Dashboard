@@ -1,3 +1,20 @@
+# Dusk Industries™ v17 — Google OAuth Login
+
+v17 adds **Sign in with Google** to `/login`, using the existing Supabase Google OAuth provider and the existing `/auth/callback` route.
+
+For a Google-authenticated dashboard account, no password is required.
+
+Required Supabase Auth settings:
+
+```text
+Site URL: https://duskdawolf.com
+Redirect URL: https://duskdawolf.com/auth/callback
+```
+
+`DUSK_ADMIN_EMAILS` in Vercel must contain the same Google email address you sign in with.
+
+---
+
 # Dusk Industries™ v16
 
 Coming directly from the old v6 deployment? Start with `INSTALL_FROM_V6.md`.

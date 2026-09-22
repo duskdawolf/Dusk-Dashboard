@@ -20,7 +20,7 @@ export default async function LoginPage({
       <div className="eyebrow">Restricted corporate infrastructure</div>
       <h1 className="text-5xl font-black tracking-[-.05em]">Dusk Dashboard</h1>
       <p className="mt-4 text-slate-400">
-        Authorized wolves only.
+        Authorized wolves only. Google sign-in is the recommended path.
       </p>
 
       {params.setup || !publicReady || !adminReady ? (
