@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <body style="margin:0;background:#07101b;color:#eef5ff;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07101b;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;border:1px solid #21324d;border-radius:26px;background:#0b1525;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px 18px;border-bottom:1px solid #1b2940;">
+                <img src="https://duskdawolf.com/assets/logo-graffiti.png" width="240" alt="Dusk Industries" style="display:block;max-width:100%;height:auto;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#61e8ff;">
+                  RESTRICTED CORPORATE INFRASTRUCTURE
+                </div>
+
+                <h1 style="margin:14px 0 10px;font-size:34px;line-height:1.08;color:#ffffff;">
+                  Verify This Sensitive Change
+                </h1>
+
+                <p style="margin:0;color:#b8c4d6;font-size:16px;line-height:1.65;">
+                  Dusk Dashboard received a request to change protected account credentials.
+                  Enter the verification code below in the Account Security screen before
+                  changing your email address or password.
+                </p>
+
+                <div style="margin:26px 0;padding:22px;border:1px solid #61e8ff55;border-radius:18px;background:#08111e;text-align:center;">
+                  <div style="font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#65758c;">
+                    REAUTHENTICATION CODE
+                  </div>
+                  <div style="margin-top:10px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:38px;font-weight:900;letter-spacing:.18em;color:#61e8ff;">
+                    {{ .Token }}
+                  </div>
+                </div>
+
+                <div style="padding:16px;border:1px solid #ff4f9b44;border-radius:16px;background:#ff4f9b0d;">
+                  <div style="font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:#ff4f9b;">
+                    SECURITY CHECK
+                  </div>
+                  <p style="margin:7px 0 0;color:#aebbd0;font-size:13px;line-height:1.55;">
+                    Do not share this code. If you did not initiate an email or password change,
+                    do not enter it anywhere and leave your credentials unchanged.
+                  </p>
+                </div>
+
+                <p style="margin:22px 0 0;color:#65758c;font-size:12px;">
+                  Account: {{ .Email }}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;border-top:1px solid #1b2940;color:#65758c;font-size:11px;line-height:1.6;">
+                Dusk Industries™ · Operational chaos, professionally documented.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

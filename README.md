@@ -1,3 +1,51 @@
+# Dusk Industries™ v24.4.2 — Reauthentication + Global Version Footer
+
+Final v24 infrastructure release before v25 Social Publishing.
+
+## Account Security
+
+New authenticated route:
+
+```text
+/dashboard/account
+```
+
+Both email and password changes now use:
+
+```text
+supabase.auth.reauthenticate()
+        ↓
+branded OTP email
+        ↓
+user enters nonce
+        ↓
+supabase.auth.updateUser(..., nonce)
+```
+
+Branded template:
+
+```text
+supabase/email-templates/reauthentication.html
+```
+
+## Footer
+
+The root layout now adds a footer to every page:
+
+```text
+Copyright 2026 Dusk Induskries.                     v24.4.2
+```
+
+No SQL migration is required.
+
+Upgrade instructions:
+
+```text
+UPGRADE_FROM_V24_4_1.md
+```
+
+---
+
 # Dusk Industries™ v24.4.1 — Cross-Browser Auth + Branded Emails
 
 v24.4.1 replaces recovery-email PKCE dependence with a TokenHash confirmation

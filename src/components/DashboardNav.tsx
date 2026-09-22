@@ -11,6 +11,7 @@ const links = [
   { href: "/dashboard/posts", label: "Social Ops" },
   { href: "/dashboard/con-prep", label: "Con Prep" },
   { href: "/dashboard/notifications", label: "Notifications" },
+  { href: "/dashboard/account", label: "Account" },
 ];
 
 export function DashboardNav() {

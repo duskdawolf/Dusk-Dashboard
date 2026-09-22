@@ -124,6 +124,39 @@ Save each template after pasting it.
 
 ---
 
+
+## Reauthentication
+
+Supabase now includes a dedicated **Reauthentication** Auth template for
+sensitive credential changes. v24.4.2 uses it from:
+
+```text
+/dashboard/account
+```
+
+for both email and password changes.
+
+Subject:
+
+```text
+[Dusk Ops] {{ .Token }} is your verification code
+```
+
+HTML:
+
+```text
+supabase/email-templates/reauthentication.html
+```
+
+The template intentionally displays `{{ .Token }}` rather than an action link.
+The Dashboard calls `supabase.auth.reauthenticate()`, the user enters the code,
+and that nonce is sent with `updateUser(...)` for the credential change.
+
+Supabase documents reauthentication as the verification-code flow for sensitive
+operations, including password changes, and supports the nonce on `updateUser`.
+
+---
+
 # Supabase URL configuration
 
 Keep:
