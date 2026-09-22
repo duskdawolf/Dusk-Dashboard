@@ -6,6 +6,7 @@ import {
   createAdminSupabaseClient,
   supabaseAdminConfigured,
 } from "@/lib/supabase/server";
+import { notifyAdmins } from "@/lib/notifications";
 
 const EventTypeSchema = z.enum(["convention", "meetup", "hosting", "public"]);
 
@@ -115,6 +116,19 @@ export async function POST(request: Request) {
     );
   }
 
+  await notifyAdmins({
+    topicKey: "event.created",
+    title: `Deployment created: ${data.title}`,
+    message: data.location
+      ? `${data.location} was added to Dusk Operations.`
+      : "A new published event record was added to Dusk Operations.",
+    targetUrl: `/chaos/${data.slug}`,
+    actionLabel: "Open deployment",
+    eventId: data.id,
+    dedupeKey: `event.created:${data.id}`,
+    dedupeMinutes: 1440,
+  }).catch(() => undefined);
+
   return NextResponse.json({ event: data }, { status: 201 });
 }
 
@@ -169,6 +183,17 @@ export async function PATCH(request: Request) {
       { status: 500 }
     );
   }
+
+  await notifyAdmins({
+    topicKey: "event.updated",
+    title: `Deployment updated: ${data.title}`,
+    message: "The event record was updated in Dusk Operations.",
+    targetUrl: `/chaos/${data.slug}`,
+    actionLabel: "Open deployment",
+    eventId: data.id,
+    dedupeKey: `event.updated:${data.id}:${Math.floor(Date.now() / 300000)}`,
+    dedupeMinutes: 5,
+  }).catch(() => undefined);
 
   return NextResponse.json({ event: data });
 }

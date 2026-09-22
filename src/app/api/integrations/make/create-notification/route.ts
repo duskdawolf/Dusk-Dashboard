@@ -1,24 +1,30 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
-import { sendWebPush } from "@/lib/push";
+import { createDuskNotification } from "@/lib/notifications";
+import { topicForKey } from "@/lib/notification-catalog";
 
 function authorized(request: Request) {
   const expected = process.env.MAKE_WEBHOOK_SECRET;
-  if (!expected) return false;
-  return request.headers.get("authorization") === `Bearer ${expected}`;
+  return Boolean(
+    expected &&
+      request.headers.get("authorization") === `Bearer ${expected}`,
+  );
 }
 
 const Payload = z.object({
   adminEmail: z.string().email(),
-  severity: z.enum(["info","action","reminder","urgent"]).default("info"),
-  category: z.enum([
-    "events","con_prep","sticker_factory","orders","shipping","social","finance","system"
-  ]).default("system"),
+  topicKey: z.string().min(1).max(160).default("system.generic"),
   title: z.string().min(1).max(200),
   message: z.string().min(1).max(4000),
   targetUrl: z.string().max(500).nullable().optional(),
-  channels: z.array(z.enum(["web_push","telegram","email"])).default(["web_push","telegram"]),
+  actionLabel: z.string().max(80).nullable().optional(),
+  dedupeKey: z.string().max(300).nullable().optional(),
+  dedupeMinutes: z.number().int().min(1).max(10080).optional(),
+  eventId: z.string().uuid().nullable().optional(),
+  postId: z.string().uuid().nullable().optional(),
+  orderId: z.string().uuid().nullable().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,62 +34,66 @@ export async function POST(request: Request) {
 
   const parsed = Payload.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid notification payload." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid notification payload.", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
 
   const input = parsed.data;
-  const supabase = createAdminSupabaseClient();
+  const topic = topicForKey(input.topicKey);
 
-  const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+  if (!topic) {
+    return NextResponse.json(
+      { error: "Unknown notification topic." },
+      { status: 400 },
+    );
+  }
+
+  const supabase = createAdminSupabaseClient();
+  const { data: userData, error: userError } =
+    await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+
   if (userError) {
     return NextResponse.json({ error: userError.message }, { status: 500 });
   }
 
   const user = userData.users.find(
-    (item) => item.email?.toLowerCase() === input.adminEmail.toLowerCase()
+    (item) =>
+      item.email?.toLowerCase() === input.adminEmail.toLowerCase(),
   );
 
   if (!user) {
-    return NextResponse.json({ error: "Admin user not found." }, { status: 404 });
+    return NextResponse.json(
+      { error: "Admin user not found." },
+      { status: 404 },
+    );
   }
 
-  const { data: notification, error } = await supabase
-    .from("notifications")
-    .insert({
-      user_id: user.id,
-      severity: input.severity,
-      category: input.category,
+  try {
+    const result = await createDuskNotification({
+      userId: user.id,
+      topicKey: input.topicKey,
       title: input.title,
       message: input.message,
-      target_url: input.targetUrl ?? null,
-    })
-    .select("*")
-    .single();
+      targetUrl: input.targetUrl ?? null,
+      actionLabel: input.actionLabel ?? null,
+      dedupeKey: input.dedupeKey ?? null,
+      dedupeMinutes: input.dedupeMinutes,
+      eventId: input.eventId ?? null,
+      postId: input.postId ?? null,
+      orderId: input.orderId ?? null,
+      payload: input.payload ?? {},
+    });
 
-  if (error || !notification) {
-    return NextResponse.json({ error: error?.message ?? "Could not create notification." }, { status: 500 });
+    return NextResponse.json({ ok: true, ...result });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Could not create notification.",
+        detail: error instanceof Error ? error.message : "Unknown error.",
+      },
+      { status: 500 },
+    );
   }
-
-  await supabase.from("notification_deliveries").insert(
-    input.channels.map((channel) => ({
-      notification_id: notification.id,
-      channel,
-      status: "pending",
-    }))
-  );
-
-  if (input.channels.includes("web_push")) {
-    const result = await sendWebPush(notification);
-    await supabase
-      .from("notification_deliveries")
-      .update({
-        status: result.skipped ? "skipped" : result.failed > 0 ? "failed" : "sent",
-        attempt_count: 1,
-        sent_at: result.sent > 0 ? new Date().toISOString() : null,
-      })
-      .eq("notification_id", notification.id)
-      .eq("channel", "web_push");
-  }
-
-  return NextResponse.json({ ok: true, notification });
 }

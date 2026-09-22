@@ -9,7 +9,7 @@ export const metadata = { title: "Dusk Dashboard Login" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ setup?: string; unauthorized?: string }>;
+  searchParams: Promise<{ setup?: string; unauthorized?: string; recoveryError?: string }>;
 }) {
   const params = await searchParams;
   const publicReady = supabasePublicConfigured();
@@ -20,7 +20,7 @@ export default async function LoginPage({
       <div className="eyebrow">Restricted corporate infrastructure</div>
       <h1 className="text-5xl font-black tracking-[-.05em]">Dusk Dashboard</h1>
       <p className="mt-4 text-slate-400">
-        Authorized wolves only. Google sign-in is the recommended path.
+        Authorized wolves only. Sign in with your approved dashboard email.
       </p>
 
       {params.setup || !publicReady || !adminReady ? (
@@ -31,6 +31,12 @@ export default async function LoginPage({
             server secret key, database schema, and DUSK_ADMIN_EMAILS environment
             variable before writes are enabled.
           </p>
+        </div>
+      ) : null}
+
+      {params.recoveryError ? (
+        <div className="mt-6 rounded-2xl border border-dusk-pink/30 bg-dusk-pink/10 p-4 text-sm">
+          Password recovery could not be completed: {params.recoveryError}
         </div>
       ) : null}
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import type { EventType } from "@/types";
 
@@ -376,7 +377,22 @@ export function EventManager({
                   </p>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {row.published ? (
+                    <Link
+                      className="button-secondary"
+                      href={`/chaos/${row.slug}`}
+                      target="_blank"
+                    >
+                      Public page ↗
+                    </Link>
+                  ) : null}
+                  <Link
+                    className="button-secondary"
+                    href={`/dashboard/posts?eventId=${row.id}`}
+                  >
+                    Social Ops
+                  </Link>
                   <button
                     className="button-secondary"
                     type="button"

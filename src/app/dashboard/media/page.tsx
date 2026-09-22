@@ -11,10 +11,12 @@ export default async function DashboardMediaPage() {
     supabase
       .from("media")
       .select("*")
-      .order("created_at", { ascending: false }),
+      .order("event_id", { ascending: true })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     supabase
       .from("events")
-      .select("id,title")
+      .select("id,title,slug,start_at")
       .order("start_at", { ascending: false }),
   ]);
 
@@ -30,7 +32,7 @@ export default async function DashboardMediaPage() {
   return (
     <MediaManager
       initialMedia={(media ?? []) as never[]}
-      events={(events ?? []) as { id: string; title: string }[]}
+      events={(events ?? []) as never[]}
     />
   );
 }

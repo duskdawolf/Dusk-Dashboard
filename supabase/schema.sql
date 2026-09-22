@@ -304,7 +304,11 @@ create table if not exists public.post_platforms (
   scheduled_at timestamptz,
   published_at timestamptz,
   post_url text,
+  last_error text,
+  attempt_count integer not null default 0,
+  make_job_id text,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   unique(post_id, platform)
 );
 
@@ -840,3 +844,82 @@ set event_id = e.id
 from public.events e
 where cs.event_id is null
   and cs.slug = e.slug;
+
+
+-- v24.2 Social Ops queue ------------------------------------------
+-- Dusk Industries v24.2
+-- Social Ops publishing queue reliability fields.
+
+alter table public.post_platforms
+  add column if not exists last_error text,
+  add column if not exists attempt_count integer not null default 0,
+  add column if not exists make_job_id text,
+  add column if not exists updated_at timestamptz not null default now();
+
+create index if not exists post_platforms_social_queue_idx
+  on public.post_platforms(status, scheduled_at);
+
+drop trigger if exists post_platforms_set_updated_at on public.post_platforms;
+create trigger post_platforms_set_updated_at
+  before update on public.post_platforms
+  for each row execute procedure public.set_updated_at();
+
+
+-- v24.3 Notification Ops ------------------------------------------
+-- Dusk Industries v24.3
+-- Notification Ops: granular topic preferences, dedupe, deep links, quiet-hour controls.
+
+alter table public.notifications
+  add column if not exists event_key text not null default 'system.generic',
+  add column if not exists dedupe_key text,
+  add column if not exists action_label text,
+  add column if not exists dashboard_visible boolean not null default true;
+
+alter table public.notifications
+  drop constraint if exists notifications_category_check;
+
+alter table public.notifications
+  add constraint notifications_category_check
+  check (category in (
+    'events','con_prep','sticker_factory','orders','shipping',
+    'social','finance','media','integrations','system'
+  ));
+
+create index if not exists notifications_user_unread_idx
+  on public.notifications(user_id, read_at, created_at desc);
+
+create index if not exists notifications_dedupe_idx
+  on public.notifications(user_id, dedupe_key, created_at desc);
+
+alter table public.notification_preferences
+  add column if not exists quiet_urgent_bypass boolean not null default true,
+  add column if not exists badge_count_enabled boolean not null default true;
+
+create table if not exists public.notification_topic_preferences (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  event_key text not null,
+  dashboard_enabled boolean not null default true,
+  web_push_enabled boolean not null default false,
+  telegram_enabled boolean not null default false,
+  email_enabled boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, event_key)
+);
+
+drop trigger if exists notification_topic_preferences_set_updated_at
+  on public.notification_topic_preferences;
+
+create trigger notification_topic_preferences_set_updated_at
+  before update on public.notification_topic_preferences
+  for each row execute procedure public.set_updated_at();
+
+alter table public.notification_topic_preferences enable row level security;
+
+drop policy if exists "Users can read own notification topic prefs"
+  on public.notification_topic_preferences;
+
+create policy "Users can read own notification topic prefs"
+  on public.notification_topic_preferences for select
+  to authenticated
+  using (auth.uid() = user_id);

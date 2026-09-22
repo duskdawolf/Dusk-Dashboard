@@ -7,7 +7,8 @@ const links = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/events", label: "Events" },
   { href: "/dashboard/media", label: "Media" },
-  { href: "/dashboard/posts", label: "Posts" },
+  { href: "/dashboard/case-studies", label: "Case Studies" },
+  { href: "/dashboard/posts", label: "Social Ops" },
   { href: "/dashboard/con-prep", label: "Con Prep" },
   { href: "/dashboard/notifications", label: "Notifications" },
 ];

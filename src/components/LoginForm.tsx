@@ -8,56 +8,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
 
-  async function magicLink() {
-    setStatus("Sending magic link...");
-
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const next = "/dashboard";
-      const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo },
-      });
-
-      if (error) {
-        setStatus(error.message);
-        return;
-      }
-
-      setStatus("Magic link sent. Check your email.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not send magic link.");
-    }
-  }
-
-
-  async function googleLogin() {
-    setStatus("Opening Google sign-in...");
-
-    try {
-      const supabase = createBrowserSupabaseClient();
-      const next = "/dashboard";
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-        },
-      });
-
-      if (error) {
-        setStatus(error.message);
-      }
-    } catch (error) {
-      setStatus(
-        error instanceof Error ? error.message : "Could not start Google sign-in."
-      );
-    }
-  }
-
   async function passwordLogin(event: FormEvent) {
     event.preventDefault();
     setStatus("Signing in...");
@@ -77,30 +27,61 @@ export function LoginForm() {
     }
   }
 
+  async function forgotPassword() {
+    if (!email) {
+      setStatus("Enter your dashboard email first.");
+      return;
+    }
+
+    setStatus("Sending password reset email...");
+
+    try {
+      const supabase = createBrowserSupabaseClient();
+      const redirectTo =
+        `${window.location.origin}/auth/recovery?next=${encodeURIComponent("/reset-password")}`;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+
+      if (error) {
+        setStatus(error.message);
+        return;
+      }
+
+      setStatus("Reset email sent. Use the link in that email to set your dashboard password.");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not send reset email.",
+      );
+    }
+  }
+
+  async function magicLink() {
+    if (!email) {
+      setStatus("Enter your dashboard email first.");
+      return;
+    }
+
+    setStatus("Sending magic link...");
+
+    const supabase = createBrowserSupabaseClient();
+    const emailRedirectTo =
+      `${window.location.origin}/auth/callback?next=${encodeURIComponent("/dashboard")}`;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo },
+    });
+
+    setStatus(error ? error.message : "Magic link sent. Check your email.");
+  }
+
   return (
     <div className="panel">
-      <div className="mb-5">
-        <button
-          className="button-primary w-full"
-          type="button"
-          onClick={googleLogin}
-        >
-          Sign in with Google
-        </button>
-        <p className="mt-2 text-xs text-slate-500">
-          Recommended for your Dusk Dashboard account.
-        </p>
-      </div>
-
-      <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-widest text-slate-600">
-        <div className="h-px flex-1 bg-dusk-line" />
-        <span>or</span>
-        <div className="h-px flex-1 bg-dusk-line" />
-      </div>
-
       <form onSubmit={passwordLogin} className="space-y-4">
         <label className="form-label">
-          Email
+          Dashboard email
           <input
             className="form-input"
             type="email"
@@ -122,19 +103,31 @@ export function LoginForm() {
           />
         </label>
 
-        <div className="flex flex-wrap gap-3">
-          <button className="button-primary" type="submit">
-            Sign in with password
+        <button className="button-primary w-full" type="submit">
+          Sign in
+        </button>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={forgotPassword}
+          >
+            Set / reset password
           </button>
           <button
             className="button-secondary"
             type="button"
             onClick={magicLink}
-            disabled={!email}
           >
-            Email me a magic link
+            Email magic link
           </button>
         </div>
+
+        <p className="text-xs text-slate-500">
+          No Google OAuth setup required. Your dashboard username is your
+          authorized email address.
+        </p>
 
         {status ? <p className="text-sm text-slate-400">{status}</p> : null}
       </form>

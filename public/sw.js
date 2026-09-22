@@ -8,10 +8,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   let data = {};
+
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Dusk Industries", message: event.data ? event.data.text() : "" };
+    data = {
+      title: "Dusk Industries",
+      message: event.data ? event.data.text() : "",
+    };
   }
 
   const title = data.title || "Dusk Industries";
@@ -22,10 +26,14 @@ self.addEventListener("push", (event) => {
     data: {
       url: data.url || "/dashboard/notifications",
       notificationId: data.notificationId || null,
+      eventKey: data.eventKey || "system.generic",
     },
-    tag: data.tag || data.notificationId || "dusk-notification",
+    tag: data.notificationId || data.eventKey || "dusk-notification",
     renotify: Boolean(data.urgent),
     requireInteraction: Boolean(data.urgent),
+    actions: data.actionLabel
+      ? [{ action: "open", title: data.actionLabel }]
+      : [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -33,19 +41,24 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/dashboard/notifications";
+
+  const targetUrl =
+    event.notification.data?.url || "/dashboard/notifications";
 
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
-      for (const client of clients) {
-        if ("focus" in client) {
-          client.navigate(targetUrl);
-          return client.focus();
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if ("focus" in client) {
+            client.navigate(targetUrl);
+            return client.focus();
+          }
         }
-      }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(targetUrl);
-      }
-    })
+
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(targetUrl);
+        }
+      }),
   );
 });

@@ -13,7 +13,9 @@ export default async function NotificationsPage() {
     .from("notifications")
     .select("*, notification_deliveries(*)")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .eq("dashboard_visible", true)
+    .order("created_at", { ascending: false })
+    .limit(250);
 
   if (error) {
     return (

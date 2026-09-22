@@ -9,13 +9,17 @@ function urlBase64ToUint8Array(base64String: string) {
     .replace(/_/g, "/");
 
   const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  return Uint8Array.from(
+    [...rawData].map((char) => char.charCodeAt(0)),
+  );
 }
 
 export function PushSettings() {
   const [supported, setSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+  const [permission, setPermission] =
+    useState<NotificationPermission>("default");
   const [subscribed, setSubscribed] = useState(false);
+  const [standalone, setStandalone] = useState(false);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -25,13 +29,18 @@ export function PushSettings() {
       "Notification" in window;
 
     setSupported(ok);
+    setStandalone(
+      window.matchMedia("(display-mode: standalone)").matches ||
+        Boolean((navigator as Navigator & { standalone?: boolean }).standalone),
+    );
 
     if (!ok) return;
 
     setPermission(Notification.permission);
 
     navigator.serviceWorker.ready.then(async (registration) => {
-      const subscription = await registration.pushManager.getSubscription();
+      const subscription =
+        await registration.pushManager.getSubscription();
       setSubscribed(Boolean(subscription));
     });
   }, []);
@@ -40,8 +49,11 @@ export function PushSettings() {
     if (!supported) return;
 
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+
     if (!publicKey) {
-      setStatus("VAPID public key is not configured.");
+      setStatus(
+        "VAPID public key is not configured in Vercel yet.",
+      );
       return;
     }
 
@@ -56,7 +68,8 @@ export function PushSettings() {
     }
 
     const registration = await navigator.serviceWorker.ready;
-    let subscription = await registration.pushManager.getSubscription();
+    let subscription =
+      await registration.pushManager.getSubscription();
 
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
@@ -83,7 +96,8 @@ export function PushSettings() {
 
   async function disable() {
     const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.getSubscription();
+    const subscription =
+      await registration.pushManager.getSubscription();
 
     if (subscription) {
       await fetch("/api/push/subscribe", {
@@ -102,34 +116,62 @@ export function PushSettings() {
   return (
     <div className="card">
       <div className="eyebrow">PWA / Web Push</div>
-      <h3 className="text-xl font-black">Phone Notifications</h3>
+      <h3 className="text-xl font-black">This Device</h3>
 
-      {!supported ? (
-        <p className="mt-3 text-sm text-slate-400">
-          This browser is not currently exposing Web Push. On iPhone, install
-          Dusk Industries to the Home Screen first, then open the installed app
-          and enable notifications here.
+      <div className="mt-3 space-y-1 text-sm text-slate-400">
+        <p>
+          PWA mode:{" "}
+          <strong className={standalone ? "text-dusk-aqua" : "text-slate-300"}>
+            {standalone ? "installed / standalone" : "browser tab"}
+          </strong>
         </p>
-      ) : (
-        <>
-          <p className="mt-3 text-sm text-slate-400">
-            Permission: {permission} · Device: {subscribed ? "subscribed" : "not subscribed"}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            {!subscribed ? (
-              <button className="button-primary" type="button" onClick={enable}>
-                Enable phone notifications
-              </button>
-            ) : (
-              <button className="button-secondary" type="button" onClick={disable}>
-                Disable on this device
-              </button>
-            )}
-          </div>
-        </>
-      )}
+        <p>
+          Browser support:{" "}
+          <strong className={supported ? "text-dusk-aqua" : "text-dusk-pink"}>
+            {supported ? "Web Push available" : "Web Push unavailable"}
+          </strong>
+        </p>
+        <p>
+          Permission: <strong>{permission}</strong>
+        </p>
+        <p>
+          Subscription:{" "}
+          <strong>{subscribed ? "active" : "not subscribed"}</strong>
+        </p>
+      </div>
 
-      {status ? <p className="mt-3 text-sm text-slate-400">{status}</p> : null}
+      {!standalone ? (
+        <div className="mt-4 rounded-xl border border-dusk-gold/20 bg-dusk-gold/5 p-3 text-xs text-slate-300">
+          On iPhone: open duskdawolf.com in Safari → Share → Add to Home
+          Screen → launch Dusk Ops from the new icon. Then enable notifications
+          here.
+        </div>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-3">
+        {!subscribed ? (
+          <button
+            className="button-primary"
+            type="button"
+            onClick={enable}
+            disabled={!supported}
+          >
+            Enable phone notifications
+          </button>
+        ) : (
+          <button
+            className="button-secondary"
+            type="button"
+            onClick={disable}
+          >
+            Disable on this device
+          </button>
+        )}
+      </div>
+
+      {status ? (
+        <p className="mt-3 text-sm text-slate-400">{status}</p>
+      ) : null}
     </div>
   );
 }

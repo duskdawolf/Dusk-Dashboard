@@ -11,7 +11,7 @@ import {
   getSupabaseUrl,
   supabasePublicConfigured,
 } from "@/lib/supabase/config";
-import type { CaseStudy, EventItem, Product, SocialLink } from "@/types";
+import type { CaseStudy, ChaosArchiveItem, EventItem, Product, SocialLink } from "@/types";
 
 function publicClient() {
   return createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
@@ -98,5 +98,74 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
     challenge: row.challenge,
     solution: row.solution,
     outcome: row.outcome,
+    eventId: row.event_id ?? undefined,
   }));
+}
+
+
+export async function getChaosArchive(): Promise<ChaosArchiveItem[]> {
+  const [events, studies] = await Promise.all([getEvents(), getCaseStudies()]);
+  const studyByEventId = new Map(
+    studies
+      .filter((study) => study.eventId)
+      .map((study) => [study.eventId!, study] as const)
+  );
+  const studyBySlug = new Map(studies.map((study) => [study.slug, study] as const));
+
+  if (!supabasePublicConfigured()) {
+    return events
+      .map((event) => {
+        const caseStudy = studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
+        return {
+          event,
+          caseStudy,
+          coverImage: caseStudy?.image,
+          mediaCount: 0,
+          incidentFiled: Boolean(caseStudy),
+        };
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.event.startAt).getTime() - new Date(a.event.startAt).getTime()
+      );
+  }
+
+  const supabase = publicClient();
+  const { data: media } = await supabase
+    .from("media")
+    .select("event_id,url,kind,sort_order,created_at")
+    .eq("published", true)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  const mediaByEvent = new Map<
+    string,
+    { url: string; kind: string; sort_order: number; created_at: string }[]
+  >();
+
+  for (const row of media ?? []) {
+    if (!row.event_id) continue;
+    const rows = mediaByEvent.get(row.event_id) ?? [];
+    rows.push(row);
+    mediaByEvent.set(row.event_id, rows);
+  }
+
+  return events
+    .map((event) => {
+      const caseStudy = studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
+      const eventMedia = mediaByEvent.get(event.id) ?? [];
+      const firstImage = eventMedia.find((item) => item.kind === "image");
+
+      return {
+        event,
+        caseStudy,
+        coverImage: caseStudy?.image || firstImage?.url,
+        mediaCount: eventMedia.length,
+        incidentFiled: Boolean(caseStudy),
+      };
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.event.startAt).getTime() - new Date(a.event.startAt).getTime()
+    );
 }

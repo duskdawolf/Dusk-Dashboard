@@ -36,6 +36,7 @@ export type Product = {
 
 export type CaseStudy = {
   id: string;
+  eventId?: string;
   slug: string;
   title: string;
   image: string;
@@ -92,4 +93,13 @@ export type ConPrep = {
   leaveForAirportAt?: string;
   packingDeadline?: string;
   notes?: string;
+};
+
+
+export type ChaosArchiveItem = {
+  event: EventItem;
+  caseStudy?: CaseStudy;
+  coverImage?: string;
+  mediaCount: number;
+  incidentFiled: boolean;
 };

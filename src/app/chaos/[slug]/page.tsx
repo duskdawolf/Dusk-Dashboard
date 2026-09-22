@@ -57,6 +57,10 @@ export default async function IncidentReportPage({
   if (!report) notFound();
 
   const { event, caseStudy, media, posts } = report;
+  const eventEndsAt = new Date(event.endAt ?? event.startAt).getTime();
+  const isFuture = eventEndsAt >= Date.now();
+  const documentType = isFuture ? "Tactical Deployment Plan" : "Incident Report";
+  const documentTypeUpper = documentType.toUpperCase();
 
   return (
     <main className="mx-auto w-[min(1220px,calc(100%-32px))] py-14">
@@ -64,9 +68,33 @@ export default async function IncidentReportPage({
         ← RETURN TO GEOGRAPHIC CHAOS
       </Link>
 
-      <div className="mt-8 grid gap-7 lg:grid-cols-[1.2fr_.8fr]">
+      <div
+        className={`mt-8 overflow-hidden rounded-3xl border p-5 sm:p-7 ${
+          isFuture
+            ? "border-dusk-aqua/30 bg-[radial-gradient(circle_at_top_left,rgba(97,232,255,.13),transparent_45%),#091321]"
+            : "border-dusk-pink/30 bg-[radial-gradient(circle_at_top_left,rgba(255,79,155,.13),transparent_45%),#091321]"
+        }`}
+      >
+        <div className="text-xs font-black uppercase tracking-[.28em] text-slate-500">
+          Dusk Industries™ classified field documentation
+        </div>
+        <div
+          className={`mt-2 text-3xl font-black tracking-[-.04em] sm:text-5xl ${
+            isFuture ? "text-dusk-aqua" : "text-dusk-pink"
+          }`}
+        >
+          {documentTypeUpper}
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          {isFuture
+            ? "Pre-deployment objectives, logistics, evidence staging, and projected operational chaos."
+            : "Post-deployment evidence, outcomes, social receipts, and documented operational chaos."}
+        </p>
+      </div>
+
+      <div className="mt-7 grid gap-7 lg:grid-cols-[1.2fr_.8fr]">
         <div>
-          <div className="eyebrow">Dusk Industries Incident Report</div>
+          <div className="eyebrow">{documentType}</div>
           <h1 className="mt-2 text-5xl font-black tracking-[-.05em] sm:text-7xl">
             {event.title}
           </h1>
@@ -88,13 +116,20 @@ export default async function IncidentReportPage({
         </div>
 
         <div className="card">
-          <div className="eyebrow">Official corporate finding</div>
-          <div className="mt-2 text-4xl font-black text-dusk-pink">
-            CHAOS SUBSTANTIATED.
+          <div className="eyebrow">
+            {isFuture ? "Operational readiness classification" : "Official corporate finding"}
+          </div>
+          <div
+            className={`mt-2 text-4xl font-black ${
+              isFuture ? "text-dusk-aqua" : "text-dusk-pink"
+            }`}
+          >
+            {isFuture ? "DEPLOYMENT PENDING." : "CHAOS SUBSTANTIATED."}
           </div>
           <p className="mt-3 text-sm text-slate-400">
-            Supporting photographic evidence, social-media receipts, and
-            questionable operational decisions are archived below.
+            {isFuture
+              ? "Planning records, advance logistics, media staging, and future social operations live here until the deployment becomes an incident."
+              : "Supporting photographic evidence, social-media receipts, and questionable operational decisions are archived below."}
           </p>
         </div>
       </div>
@@ -102,26 +137,36 @@ export default async function IncidentReportPage({
       {caseStudy ? (
         <section className="mt-10 grid gap-4 lg:grid-cols-3">
           <div className="card">
-            <div className="eyebrow">The Assignment</div>
+            <div className="eyebrow">
+              {isFuture ? "Mission Objective" : "The Assignment"}
+            </div>
             <h2 className="mt-2 text-xl font-black">{caseStudy.challenge}</h2>
           </div>
           <div className="card">
-            <div className="eyebrow">The Extremely Professional Response</div>
+            <div className="eyebrow">
+              {isFuture ? "Deployment Strategy" : "The Extremely Professional Response"}
+            </div>
             <h2 className="mt-2 text-xl font-black">{caseStudy.solution}</h2>
           </div>
           <div className="card">
-            <div className="eyebrow">Damage Report</div>
+            <div className="eyebrow">
+              {isFuture ? "Projected Outcome" : "Damage Report"}
+            </div>
             <h2 className="mt-2 text-xl font-black">{caseStudy.outcome}</h2>
           </div>
         </section>
       ) : (
         <section className="panel mt-10">
-          <div className="eyebrow">Case study status</div>
-          <h2 className="text-2xl font-black">Incident report opened. Corporate analysis pending.</h2>
+          <div className="eyebrow">{documentType} status</div>
+          <h2 className="text-2xl font-black">
+            {isFuture
+              ? "Tactical deployment plan opened. Operational details pending."
+              : "Incident report opened. Corporate analysis pending."}
+          </h2>
           <p className="mt-3 text-slate-400">
-            This event already has a permanent incident-report URL. Add a formal
-            Case Study in Chaos later and the challenge / response / damage report
-            will appear here automatically.
+            {isFuture
+              ? "This event already has a permanent Tactical Deployment Plan. Add formal planning details in Case Studies and they will appear here automatically."
+              : "This event already has a permanent Incident Report. Add a formal Case Study in Chaos later and the challenge / response / damage report will appear here automatically."}
           </p>
         </section>
       )}

@@ -686,7 +686,9 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
                     href={`/chaos/${selected.slug}`}
                     className="button-primary mt-5 inline-flex"
                   >
-                    OPEN THE INCIDENT REPORT →
+                    {statusFor(selected) === "upcoming"
+                      ? "OPEN TACTICAL DEPLOYMENT PLAN →"
+                      : "OPEN INCIDENT REPORT →"}
                   </Link>
                 </div>
               ) : (

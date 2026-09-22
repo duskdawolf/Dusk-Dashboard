@@ -2,34 +2,70 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDashboardUser } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
-import { sendWebPush } from "@/lib/push";
+import { createDuskNotification } from "@/lib/notifications";
+import { topicForKey } from "@/lib/notification-catalog";
 
 const CreateSchema = z.object({
-  severity: z.enum(["info","action","reminder","urgent"]).default("info"),
-  category: z.enum([
-    "events","con_prep","sticker_factory","orders","shipping","social","finance","system"
-  ]).default("system"),
+  topicKey: z.string().min(1).max(160).default("system.generic"),
   title: z.string().min(1).max(200),
   message: z.string().min(1).max(4000),
   targetUrl: z.string().max(500).nullable().optional(),
-  channels: z.array(z.enum(["web_push","telegram","email"])).default(["web_push"]),
+  actionLabel: z.string().max(80).nullable().optional(),
+  dedupeKey: z.string().max(300).nullable().optional(),
 });
 
-const ReadSchema = z.object({
-  id: z.string().uuid(),
-  read: z.boolean(),
-});
+const UpdateSchema = z.union([
+  z.object({
+    id: z.string().uuid(),
+    read: z.boolean(),
+  }),
+  z.object({
+    markAllRead: z.literal(true),
+  }),
+]);
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await getDashboardUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
+  const url = new URL(request.url);
+  const countOnly = url.searchParams.get("unreadCount") === "1";
   const supabase = createAdminSupabaseClient();
+
+  if (countOnly) {
+    const [{ count, error }, { data: prefs }] = await Promise.all([
+      supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("dashboard_visible", true)
+        .is("read_at", null),
+      supabase
+        .from("notification_preferences")
+        .select("badge_count_enabled")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+    ]);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      unreadCount: prefs?.badge_count_enabled === false ? 0 : count ?? 0,
+      badgeEnabled: prefs?.badge_count_enabled ?? true,
+    });
+  }
+
   const { data, error } = await supabase
     .from("notifications")
     .select("*, notification_deliveries(*)")
     .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+    .eq("dashboard_visible", true)
+    .order("created_at", { ascending: false })
+    .limit(250);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -40,76 +76,88 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const user = await getDashboardUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
   const parsed = CreateSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid notification." }, { status: 400 });
-  }
-
-  const input = parsed.data;
-  const supabase = createAdminSupabaseClient();
-
-  const { data: notification, error } = await supabase
-    .from("notifications")
-    .insert({
-      user_id: user.id,
-      severity: input.severity,
-      category: input.category,
-      title: input.title,
-      message: input.message,
-      target_url: input.targetUrl ?? null,
-    })
-    .select("*")
-    .single();
-
-  if (error || !notification) {
     return NextResponse.json(
-      { error: "Could not create notification.", detail: error?.message },
-      { status: 500 }
+      { error: "Invalid notification.", details: parsed.error.flatten() },
+      { status: 400 },
     );
   }
 
-  await supabase.from("notification_deliveries").insert(
-    input.channels.map((channel) => ({
-      notification_id: notification.id,
-      channel,
-      status: "pending",
-    }))
-  );
+  const input = parsed.data;
+  const topic = topicForKey(input.topicKey);
 
-  if (input.channels.includes("web_push")) {
-    const result = await sendWebPush(notification);
-
-    await supabase
-      .from("notification_deliveries")
-      .update({
-        status: result.skipped ? "skipped" : result.failed > 0 ? "failed" : "sent",
-        attempt_count: 1,
-        sent_at: result.sent > 0 ? new Date().toISOString() : null,
-        error_message:
-          result.failed > 0 ? `${result.failed} push subscription(s) failed.` : null,
-      })
-      .eq("notification_id", notification.id)
-      .eq("channel", "web_push");
+  if (!topic) {
+    return NextResponse.json(
+      { error: "Unknown notification topic." },
+      { status: 400 },
+    );
   }
 
-  return NextResponse.json({ notification }, { status: 201 });
+  try {
+    const result = await createDuskNotification({
+      userId: user.id,
+      topicKey: input.topicKey,
+      title: input.title,
+      message: input.message,
+      targetUrl: input.targetUrl ?? null,
+      actionLabel: input.actionLabel ?? null,
+      dedupeKey: input.dedupeKey ?? null,
+      dedupeMinutes: 5,
+    });
+
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: "Could not create notification.",
+        detail: error instanceof Error ? error.message : "Unknown error.",
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(request: Request) {
   const user = await getDashboardUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
 
-  const parsed = ReadSchema.safeParse(await request.json());
+  const parsed = UpdateSchema.safeParse(await request.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid update." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid update.", details: parsed.error.flatten() },
+      { status: 400 },
+    );
   }
 
   const supabase = createAdminSupabaseClient();
+
+  if ("markAllRead" in parsed.data) {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", user.id)
+      .eq("dashboard_visible", true)
+      .is("read_at", null);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
   const { error } = await supabase
     .from("notifications")
-    .update({ read_at: parsed.data.read ? new Date().toISOString() : null })
+    .update({
+      read_at: parsed.data.read ? new Date().toISOString() : null,
+    })
     .eq("id", parsed.data.id)
     .eq("user_id", user.id);
 

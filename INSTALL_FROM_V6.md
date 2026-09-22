@@ -1,149 +1,84 @@
-# Upgrade Dusk Industries from v6 to the current app
+# Upgrade old Dusk Industries v6 → current v24.3
 
-This guide assumes nothing after v6 has been installed.
+The current package is cumulative. Do not install every intermediate version.
 
-You do NOT need to install v7, v8, v9, etc. individually.
-This package is cumulative.
+## Code
 
-## 1 — Replace the old repo in Working Copy
+Replace the old v6 working tree with the contents of this v24.3 package while
+keeping the existing Git repository. Commit and push `main`.
 
-1. Download `dusk-industries-v16-working-copy-ready.zip`.
-2. In iOS Files, tap the ZIP once to extract it.
-3. Open the existing Dusk Git repository in Working Copy.
-4. Keep the repository itself / `.git` metadata.
-5. Remove the old v6 project files from the working tree.
-6. Copy the CONTENTS of the extracted v16 folder into the repo root.
+## Fresh Supabase initialization
 
-The repo root should contain:
+If the Dusk database has never been initialized, run in this order:
 
-package.json
-src/
-public/
-supabase/
-make/
-README.md
-INSTALL_FROM_V6.md
-.env.example
+```text
+1. supabase/schema.sql
+2. supabase/seed.sql
+3. supabase/seed-furpocalypse-2026.sql
+```
 
-Do not nest all of that inside another folder.
+The current `schema.sql` already contains the v24.2 Social Ops and v24.3
+Notification Ops structures. Do not then run all historical migrations.
 
-7. Review Changes.
-8. Commit once, e.g. `Upgrade Dusk Industries from v6 to current platform`.
-9. Push `main`.
+If the database is already initialized, use the appropriate upgrade guide
+instead:
 
-Vercel should auto-deploy.
+```text
+UPGRADE_FROM_V22.md
+UPGRADE_FROM_V24_2.md
+```
 
-## 2 — Vercel environment variables
+## Required Vercel environment
 
-Your Vercel/Supabase integration may already provide:
+```text
+DUSK_ADMIN_EMAILS
+MAKE_WEBHOOK_SECRET
+DUSK_HOME_TIMEZONE=America/New_York
 
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 SUPABASE_SECRET_KEY
+```
 
-The app also supports older Supabase aliases.
+Supported older Supabase key aliases still work.
 
-Add:
+For phone push:
 
-DUSK_ADMIN_EMAILS=<your dashboard login email>
-MAKE_WEBHOOK_SECRET=<long random secret>
-DUSK_HOME_TIMEZONE=America/New_York
+```text
+NEXT_PUBLIC_VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY
+VAPID_SUBJECT
+```
 
-For Web Push also add:
+Generate VAPID keys:
 
-NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public key>
-VAPID_PRIVATE_KEY=<private key>
-VAPID_SUBJECT=mailto:<your email>
+```bash
+npx web-push generate-vapid-keys
+```
 
-Never expose SUPABASE_SECRET_KEY, VAPID_PRIVATE_KEY, or MAKE_WEBHOOK_SECRET with a NEXT_PUBLIC_ prefix.
+## Supabase Auth URLs
 
-Redeploy after changing environment variables.
-
-## 3 — Supabase database
-
-Because this guide assumes you are coming directly from v6, use the cumulative schema rather than every historical migration.
-
-Run in Supabase SQL Editor, in this order:
-
-1. `supabase/schema.sql`
-2. `supabase/seed.sql`
-3. `supabase/seed-furpocalypse-2026.sql`
-
-Do not then run all the historical migration files; the cumulative schema already includes them.
-
-## 4 — Supabase Auth
-
-Set the Supabase Site URL to:
-
+```text
+Site URL:
 https://duskdawolf.com
 
-Allow redirect:
-
+Redirect URLs:
 https://duskdawolf.com/auth/callback
+https://duskdawolf.com/auth/recovery
+```
 
-Then visit:
+## After deployment
 
-https://duskdawolf.com/login
+Verify:
 
-Use the email configured in DUSK_ADMIN_EMAILS.
-
-## 5 — Test the Dashboard
-
-Check:
-
+```text
 /dashboard/events
 /dashboard/media
+/dashboard/case-studies
 /dashboard/posts
 /dashboard/con-prep
 /dashboard/notifications
+```
 
-Recommended:
-1. Events load.
-2. Con Prep shows FurPocalypse.
-3. FurPoc shows Hilton Stamford and projected costs.
-4. Media accepts an image upload.
-5. Posts saves a draft.
-6. Notifications opens without a database error.
-
-## 6 — Install Dusk Ops as an iPhone PWA
-
-After VAPID keys are configured and the new deployment is live:
-
-1. Open https://duskdawolf.com in Safari.
-2. Tap Share.
-3. Choose Add to Home Screen.
-4. Launch the installed Dusk Ops app from the Home Screen.
-5. Sign in.
-6. Open `/dashboard/notifications`.
-7. Tap Enable phone notifications.
-8. Accept iOS notification permission.
-9. Tap Send test notification.
-
-Use the installed Home Screen app for iPhone Web Push.
-
-## 7 — Make
-
-Two scenarios are part of this rollout:
-
-- Dusk Ops — Google Calendar Sync
-- Dusk Ops — Telegram Notification Router
-
-Details are in `make/SCENARIOS.md`.
-
-They use MAKE_WEBHOOK_SECRET when calling protected Dusk endpoints.
-
-Calendar:
-GET  /api/integrations/make/calendar-jobs
-POST /api/integrations/make/calendar-jobs
-
-Telegram:
-GET  /api/integrations/make/notifications
-POST /api/integrations/make/notifications
-
-## 8 — Do NOT
-
-- push every intermediate version one at a time
-- run every historical migration after the fresh cumulative schema
-- commit secrets or `.env.local`
-- expose private keys as NEXT_PUBLIC_ variables
-- manually duplicate Google Calendar events once Make owns a synced job
+Then install `duskdawolf.com` to the iPhone Home Screen, open the installed
+Dusk Ops PWA, enable notifications, and configure Routing Preferences.

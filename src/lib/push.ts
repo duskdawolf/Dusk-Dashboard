@@ -8,13 +8,15 @@ type NotificationRow = {
   title: string;
   message: string;
   target_url: string | null;
+  action_label?: string | null;
+  event_key?: string | null;
 };
 
 function configured() {
   return Boolean(
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
-    process.env.VAPID_PRIVATE_KEY &&
-    process.env.VAPID_SUBJECT
+      process.env.VAPID_PRIVATE_KEY &&
+      process.env.VAPID_SUBJECT,
   );
 }
 
@@ -24,15 +26,63 @@ function configureWebPush() {
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
+    process.env.VAPID_PRIVATE_KEY!,
   );
 
   return true;
 }
 
+function minutesForTime(value: string | null | undefined) {
+  if (!value) return null;
+  const [hour, minute] = value.split(":").map(Number);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+  return hour * 60 + minute;
+}
+
+function localMinutesNow(timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "0",
+  );
+
+  return hour * 60 + minute;
+}
+
+function insideQuietHours(
+  quietStart: string | null | undefined,
+  quietEnd: string | null | undefined,
+  timeZone: string,
+) {
+  const start = minutesForTime(quietStart);
+  const end = minutesForTime(quietEnd);
+
+  if (start == null || end == null || start === end) return false;
+
+  const now = localMinutesNow(timeZone);
+
+  if (start < end) {
+    return now >= start && now < end;
+  }
+
+  // Overnight window, e.g. 23:00 → 07:00.
+  return now >= start || now < end;
+}
+
 export async function sendWebPush(notification: NotificationRow) {
   if (!configureWebPush() || !notification.user_id) {
-    return { sent: 0, failed: 0, skipped: true };
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "Web Push/VAPID is not configured.",
+    };
   }
 
   const supabase = createAdminSupabaseClient();
@@ -44,20 +94,34 @@ export async function sendWebPush(notification: NotificationRow) {
     .maybeSingle();
 
   if (prefs && !prefs.web_push_enabled) {
-    return { sent: 0, failed: 0, skipped: true };
+    return {
+      sent: 0,
+      failed: 0,
+      skipped: true,
+      reason: "Web Push is disabled globally.",
+    };
   }
 
-  const severityAllowed =
-    notification.severity === "urgent"
-      ? prefs?.urgent_push ?? true
-      : notification.severity === "reminder"
-        ? prefs?.reminder_push ?? true
-        : notification.severity === "action"
-          ? prefs?.action_push ?? true
-          : prefs?.info_push ?? false;
+  if (
+    prefs?.quiet_hours_enabled &&
+    insideQuietHours(
+      prefs.quiet_start,
+      prefs.quiet_end,
+      prefs.timezone ?? "America/New_York",
+    )
+  ) {
+    const urgentCanBypass =
+      notification.severity === "urgent" &&
+      (prefs.quiet_urgent_bypass ?? true);
 
-  if (!severityAllowed) {
-    return { sent: 0, failed: 0, skipped: true };
+    if (!urgentCanBypass) {
+      return {
+        sent: 0,
+        failed: 0,
+        skipped: true,
+        reason: "Suppressed by quiet hours.",
+      };
+    }
   }
 
   const { data: subscriptions } = await supabase
@@ -73,7 +137,9 @@ export async function sendWebPush(notification: NotificationRow) {
     title: notification.title,
     message: notification.message,
     url: notification.target_url || "/dashboard/notifications",
+    actionLabel: notification.action_label || "Open",
     notificationId: notification.id,
+    eventKey: notification.event_key || "system.generic",
     urgent: notification.severity === "urgent",
   });
 
@@ -87,7 +153,7 @@ export async function sendWebPush(notification: NotificationRow) {
             auth: row.auth,
           },
         },
-        payload
+        payload,
       );
       sent += 1;
     } catch (error: any) {
@@ -102,5 +168,10 @@ export async function sendWebPush(notification: NotificationRow) {
     }
   }
 
-  return { sent, failed, skipped: false };
+  return {
+    sent,
+    failed,
+    skipped: false,
+    reason: null,
+  };
 }
