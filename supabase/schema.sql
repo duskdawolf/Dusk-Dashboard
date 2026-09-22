@@ -592,8 +592,7 @@ alter table public.cost_entries
     check (cost_status in ('estimated','planned','paid','reimbursed'));
 
 create unique index if not exists cost_entries_external_key_unique
-  on public.cost_entries(external_key)
-  where external_key is not null;
+  on public.cost_entries(external_key);
 
 drop trigger if exists con_registrations_set_updated_at on public.con_registrations;
 create trigger con_registrations_set_updated_at

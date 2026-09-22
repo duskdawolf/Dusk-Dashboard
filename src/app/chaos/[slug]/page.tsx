@@ -17,6 +17,11 @@ function dateLabel(startAt: string, endAt?: string) {
   return `${formatter.format(start)} – ${formatter.format(end)}`;
 }
 
+type MetricTotals = {
+  reach: number;
+  engagements: number;
+};
+
 function metricTotal(post: {
   platforms: {
     likes?: number;
@@ -26,8 +31,8 @@ function metricTotal(post: {
     reach?: number;
     impressions?: number;
   }[];
-}) {
-  return post.platforms.reduce(
+}): MetricTotals {
+  return post.platforms.reduce<MetricTotals>(
     (totals, platform) => ({
       reach: totals.reach + (platform.reach ?? platform.impressions ?? 0),
       engagements:

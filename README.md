@@ -1,3 +1,39 @@
+# Dusk Industries™ v20 — TypeScript Build Fix
+
+Fixes the incident-report analytics reducer typing so Vercel/TypeScript correctly
+infers both `reach` and `engagements` as required numeric accumulator fields.
+
+No database migration is required for v20.
+
+---
+
+# Dusk Industries™ v19 — Supabase Seed Fix
+
+v19 fixes the FurPocalypse cost seed error:
+
+`there is no unique or exclusion constraint matching the ON CONFLICT specification`
+
+The old cumulative schema created a partial unique index on `cost_entries.external_key`,
+but the seed used `ON CONFLICT (external_key)`. PostgreSQL cannot infer that partial
+index without the predicate.
+
+The current schema now uses a normal unique index. PostgreSQL still permits multiple
+NULL values, so this preserves the intended behavior while making the upsert valid.
+
+For an already-initialized database, run:
+
+```text
+supabase/migrations/20260928_fix_cost_external_key_conflict.sql
+```
+
+Then rerun:
+
+```text
+supabase/seed-furpocalypse-2026.sql
+```
+
+---
+
 # Dusk Industries™ v18 — Interactive Chaos Map + Incident Reports
 
 ## Map changes
