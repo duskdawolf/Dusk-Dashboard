@@ -238,7 +238,7 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
       feature(
         statesTopology as never,
         topology.objects.states as never,
-      ) as unknown as { features: Array<{ id?: string | number }> }
+      ) as unknown as { features: Array<Record<string, unknown> & { id?: string | number }> }
     ).features;
 
     const northeastStates = states.filter((state) => {
@@ -461,7 +461,7 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
                   <>
                     <g fill="#12223a" stroke="#2d4a6b" strokeWidth="1.1">
                       {stateFeatures.states.map((state, index) => (
-                        <path key={index} d={nationalPath(state) ?? ""} />
+                        <path key={index} d={nationalPath(state as never) ?? ""} />
                       ))}
                     </g>
 

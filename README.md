@@ -1,3 +1,13 @@
+# Dusk Industries™ v22 — Map TypeScript Build Fix
+
+Fixes the `d3-geo` TypeScript mismatch introduced by the Northeast zoom refactor.
+The US state features are explicitly cast to GeoJSON-compatible objects when passed
+to `geoPath`, while preserving the FIPS `id` used for Northeast filtering.
+
+No SQL migration is required.
+
+---
+
 # Dusk Industries™ v21 — Northeast Zoom Fix
 
 - Northeast mode now fits the map to actual Northeast state geometry.
