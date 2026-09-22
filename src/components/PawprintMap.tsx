@@ -18,6 +18,23 @@ const HEIGHT = 560;
 // The same light aqua / "TOSS" color used throughout Dusk branding.
 const DUSK_BLUE = "#61e8ff";
 
+// FIPS IDs used by us-atlas. Keeping the zoom geometry to the Northeast avoids
+// Alaska/Hawaii/continental-wide geometry from shrinking the zoomed map.
+const NORTHEAST_STATE_IDS = new Set([
+  "09", // CT
+  "10", // DE
+  "11", // DC
+  "23", // ME
+  "24", // MD
+  "25", // MA
+  "33", // NH
+  "34", // NJ
+  "36", // NY
+  "42", // PA
+  "44", // RI
+  "50", // VT
+]);
+
 const northeastBounds = {
   minLon: -80.6,
   maxLon: -66.2,
@@ -217,13 +234,21 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
       objects: { states: unknown; nation: unknown };
     };
 
+    const states = (
+      feature(
+        statesTopology as never,
+        topology.objects.states as never,
+      ) as unknown as { features: Array<{ id?: string | number }> }
+    ).features;
+
+    const northeastStates = states.filter((state) => {
+      const id = String(state.id ?? "").padStart(2, "0");
+      return NORTHEAST_STATE_IDS.has(id);
+    });
+
     return {
-      states: (
-        feature(
-          statesTopology as never,
-          topology.objects.states as never,
-        ) as unknown as { features: never[] }
-      ).features,
+      states,
+      northeastStates,
       nation: feature(
         statesTopology as never,
         topology.objects.nation as never,
@@ -244,27 +269,19 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
   );
 
   const northeastProjection = useMemo(() => {
-    const boundsFeature = {
-      type: "Polygon",
-      coordinates: [
-        [
-          [northeastBounds.minLon, northeastBounds.minLat],
-          [northeastBounds.maxLon, northeastBounds.minLat],
-          [northeastBounds.maxLon, northeastBounds.maxLat],
-          [northeastBounds.minLon, northeastBounds.maxLat],
-          [northeastBounds.minLon, northeastBounds.minLat],
-        ],
-      ],
+    const collection = {
+      type: "FeatureCollection",
+      features: stateFeatures.northeastStates,
     } as never;
 
     return geoMercator().fitExtent(
       [
-        [50, 45],
-        [WIDTH - 50, HEIGHT - 45],
+        [48, 42],
+        [WIDTH - 48, HEIGHT - 42],
       ],
-      boundsFeature,
+      collection,
     );
-  }, []);
+  }, [stateFeatures.northeastStates]);
 
   const nationalPath = useMemo(
     () => geoPath(nationalProjection),
@@ -554,8 +571,8 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
                 ) : (
                   <>
                     <g fill="#12223a" stroke="#2d4a6b" strokeWidth="1.15">
-                      {stateFeatures.states.map((state, index) => (
-                        <path key={index} d={northeastPath(state) ?? ""} />
+                      {stateFeatures.northeastStates.map((state, index) => (
+                        <path key={index} d={northeastPath(state as never) ?? ""} />
                       ))}
                     </g>
 
@@ -676,7 +693,7 @@ export function PawprintMap({ events }: { events: EventItem[] }) {
                 <p className="text-sm text-slate-500">
                   {zoomMode === "national"
                     ? "Tap a pawprint—or hit the Northeast cluster to zoom into the operational disaster."
-                    : "Tap an individual Northeast pawprint to inspect that deployment."}
+                    : "Tap an individual pawprint to inspect that deployment. Northeast chaos is now actually zoomed."}
                 </p>
               )}
             </div>

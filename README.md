@@ -1,3 +1,14 @@
+# Dusk Industries™ v21 — Northeast Zoom Fix
+
+- Northeast mode now fits the map to actual Northeast state geometry.
+- Alaska/Hawaii/the rest of the country are no longer rendered in the zoomed view.
+- Event pawprints remain clickable with the deployment preview + incident report link.
+- Also moves `themeColor` from metadata to the Next.js `viewport` export, removing the repeated Vercel build warnings.
+
+No SQL migration is required.
+
+---
+
 # Dusk Industries™ v20 — TypeScript Build Fix
 
 Fixes the incident-report analytics reducer typing so Vercel/TypeScript correctly
