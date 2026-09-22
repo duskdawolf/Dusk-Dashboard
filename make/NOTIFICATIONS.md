@@ -50,16 +50,16 @@ Failure:
 A failed queued delivery receives one retry after 15 minutes before the failure
 becomes final.
 
-## Email queue
+## Email delivery in v24.4
 
-The same endpoint supports:
+Email no longer uses Make.
 
-```text
-?channel=email
-```
+When Email is enabled for a notification topic, Dusk Notification Ops sends the
+message directly through Resend and records the result in
+`notification_deliveries`.
 
-Email is globally disabled by default until an email delivery provider/scenario
-is connected.
+Supabase Auth recovery/magic-link email is also routed through Resend using
+Supabase Custom SMTP. See `RESEND_SETUP.md`.
 
 ## External systems creating notifications
 

@@ -247,7 +247,7 @@ export function NotificationPreferences() {
               <div>
                 <strong>Email</strong>
                 <p className="mt-1 text-xs text-slate-500">
-                  Queue is ready; provider delivery can be connected later.
+                  Delivered directly through Resend when enabled.
                 </p>
               </div>
               <Switch

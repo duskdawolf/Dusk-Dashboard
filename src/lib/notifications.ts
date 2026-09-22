@@ -5,6 +5,7 @@ import {
   type NotificationSeverity,
 } from "@/lib/notification-catalog";
 import { sendWebPush } from "@/lib/push";
+import { sendResendNotificationEmail } from "@/lib/email";
 
 export type NotificationChannel = "web_push" | "telegram" | "email";
 
@@ -220,6 +221,34 @@ export async function createDuskNotification(
       })
       .eq("notification_id", notification.id)
       .eq("channel", "web_push");
+  }
+
+  if (channels.email) {
+    const { data: authUser } = await supabase.auth.admin.getUserById(
+      input.userId,
+    );
+
+    const emailResult = await sendResendNotificationEmail(
+      authUser?.user?.email,
+      notification,
+    );
+
+    await supabase
+      .from("notification_deliveries")
+      .update({
+        status:
+          emailResult.skipped
+            ? "skipped"
+            : emailResult.failed > 0
+              ? "failed"
+              : "sent",
+        provider_message_id: emailResult.providerMessageId ?? null,
+        attempt_count: 1,
+        sent_at: emailResult.sent > 0 ? new Date().toISOString() : null,
+        error_message: emailResult.reason ?? null,
+      })
+      .eq("notification_id", notification.id)
+      .eq("channel", "email");
   }
 
   return { notification, skipped: false, reason: null };

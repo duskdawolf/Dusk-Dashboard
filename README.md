@@ -1,3 +1,28 @@
+# Dusk Industries™ v24.4 — Resend Email
+
+v24.4 intentionally changes only email routing.
+
+- Supabase Auth recovery/magic-link mail is configured to use Resend Custom SMTP.
+- Notification Ops Email delivery now sends directly through the Resend API.
+- Telegram remains on the Make delivery queue.
+- Notification delivery history records the Resend message ID or error.
+- No SQL migration is required.
+- No Resend API key is committed to the repository.
+
+Setup:
+
+```text
+RESEND_SETUP.md
+```
+
+Upgrade from v24.3:
+
+```text
+UPGRADE_FROM_V24_3.md
+```
+
+---
+
 # Dusk Industries™ v24.3 — Notification Ops + PWA Push
 
 v24.3 finishes the internal notification system before v25.0 connects live

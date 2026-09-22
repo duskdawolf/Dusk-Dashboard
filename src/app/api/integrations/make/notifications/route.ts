@@ -25,9 +25,12 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const channel = url.searchParams.get("channel") ?? "telegram";
 
-  if (!["telegram", "email"].includes(channel)) {
+  if (channel !== "telegram") {
     return NextResponse.json(
-      { error: "Unsupported queued delivery channel." },
+      {
+        error:
+          "Only Telegram uses the Make delivery queue in v24.4. Email is delivered directly through Resend.",
+      },
       { status: 400 },
     );
   }
