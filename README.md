@@ -1,3 +1,42 @@
+# Dusk Industries™ v18 — Interactive Chaos Map + Incident Reports
+
+## Map changes
+- Future travel trajectory is now **Dusk blue / TOSS aqua** (`#61e8ff`).
+- The old separate Northeast inset is gone.
+- Clicking the Northeast cluster now **zooms the same map into the Northeast**.
+- `Zoom back out` returns to the national view.
+- Individual event paws are clickable in the zoomed view.
+- Selected events show a deployment preview.
+- Preview CTA: **OPEN THE INCIDENT REPORT →**
+
+## Event incident reports
+Every recorded event now has a permanent URL:
+
+```text
+/chaos/<event-slug>
+```
+
+The page automatically combines:
+- event details
+- formal Case Study in Chaos copy, when one exists
+- event-linked public photos/videos
+- event-linked published social posts
+- platform links
+- latest stored reach/engagement metrics
+
+This means the map becomes the entry point to a living event archive rather than a decorative travel graphic.
+
+## Supabase
+Existing installs should run:
+
+```text
+supabase/migrations/20260927_event_incident_reports.sql
+```
+
+A fresh install using the cumulative `supabase/schema.sql` already includes it.
+
+---
+
 # Dusk Industries™ v17 — Google OAuth Login
 
 v17 adds **Sign in with Google** to `/login`, using the existing Supabase Google OAuth provider and the existing `/auth/callback` route.

@@ -22,7 +22,7 @@ export default async function HomePage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">{upcoming.map((event) => <EventCard key={event.id} event={event} />)}</div>
       </section>
 
-      <section className="mx-auto w-[min(1220px,calc(100%-32px))] py-16">
+      <section id="travel-map" className="mx-auto w-[min(1220px,calc(100%-32px))] scroll-mt-24 py-16">
         <div className="mb-8"><div className="eyebrow">Logistics & expansion</div><h2 className="text-4xl font-black">Pawprint Expansion Map</h2></div>
         <PawprintMap events={events} />
       </section>
