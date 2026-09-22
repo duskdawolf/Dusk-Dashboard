@@ -1,3 +1,45 @@
+# Dusk Industries™ v24.4.1 — Cross-Browser Auth + Branded Emails
+
+v24.4.1 replaces recovery-email PKCE dependence with a TokenHash confirmation
+route so a password reset can be requested in one browser/device and completed
+in another.
+
+New route:
+
+```text
+/auth/confirm
+```
+
+It verifies Supabase `token_hash` + auth type server-side and establishes the
+SSR session before redirecting to `/reset-password` or `/dashboard`.
+
+Included branded Supabase Auth templates:
+
+```text
+supabase/email-templates/recovery.html
+supabase/email-templates/magic-link.html
+supabase/email-templates/confirm-signup.html
+supabase/email-templates/invite.html
+supabase/email-templates/change-email.html
+```
+
+Notification Ops Resend emails now use the same Dusk Industries spray-paint
+logo and website visual system.
+
+Important: the Recovery template must be pasted into Supabase Auth manually;
+deploying application code cannot modify the hosted project's email template.
+
+Setup:
+
+```text
+AUTH_EMAIL_TEMPLATES.md
+UPGRADE_FROM_V24_4.md
+```
+
+No SQL migration is required.
+
+---
+
 # Dusk Industries™ v24.4 — Resend Email
 
 v24.4 intentionally changes only email routing.

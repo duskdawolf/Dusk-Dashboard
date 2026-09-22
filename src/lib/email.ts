@@ -75,33 +75,51 @@ export async function sendResendNotificationEmail(
 <!doctype html>
 <html>
   <body style="margin:0;background:#07101b;color:#eef5ff;font-family:Arial,Helvetica,sans-serif;">
-    <div style="max-width:640px;margin:0 auto;padding:32px 20px;">
-      <div style="font-size:12px;font-weight:800;letter-spacing:.18em;color:#61e8ff;text-transform:uppercase;">
-        Dusk Industries™ Notification Ops
-      </div>
-      <div style="margin-top:10px;display:inline-block;padding:6px 10px;border-radius:999px;background:#132238;color:#aebbd0;font-size:11px;font-weight:800;">
-        ${severity}
-      </div>
-      <h1 style="margin:18px 0 10px;font-size:30px;line-height:1.1;color:#ffffff;">
-        ${title}
-      </h1>
-      <div style="font-size:16px;line-height:1.6;color:#c3ccda;">
-        ${message}
-      </div>
-      ${
-        targetUrl
-          ? `<div style="margin-top:26px;">
-               <a href="${escapeHtml(targetUrl)}" style="display:inline-block;background:#61e8ff;color:#07101b;text-decoration:none;font-weight:900;padding:12px 18px;border-radius:12px;">
-                 ${actionLabel} →
-               </a>
-             </div>`
-          : ""
-      }
-      <div style="margin-top:34px;padding-top:18px;border-top:1px solid #17243a;color:#65758c;font-size:11px;">
-        Topic: ${escapeHtml(notification.event_key || "system.generic")}<br />
-        Notification ID: ${escapeHtml(notification.id)}
-      </div>
-    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07101b;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;border:1px solid #21324d;border-radius:26px;background:#0b1525;overflow:hidden;">
+            <tr>
+              <td style="padding:22px 28px;border-bottom:1px solid #1b2940;">
+                <img src="https://duskdawolf.com/assets/logo-graffiti.png" width="240" alt="Dusk Industries" style="display:block;max-width:100%;height:auto;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#61e8ff;">
+                  DUSK INDUSTRIES™ NOTIFICATION OPS
+                </div>
+                <div style="margin-top:12px;display:inline-block;padding:6px 10px;border:1px solid #263854;border-radius:999px;background:#08111e;color:#aebbd0;font-size:10px;font-weight:900;letter-spacing:.12em;">
+                  ${severity}
+                </div>
+                <h1 style="margin:18px 0 10px;font-size:32px;line-height:1.1;color:#ffffff;">
+                  ${title}
+                </h1>
+                <div style="font-size:16px;line-height:1.65;color:#c3ccda;">
+                  ${message}
+                </div>
+                ${
+                  targetUrl
+                    ? `<div style="margin-top:26px;">
+                         <a href="${escapeHtml(targetUrl)}" style="display:inline-block;background:#61e8ff;color:#07101b;text-decoration:none;font-weight:900;padding:13px 19px;border-radius:13px;">
+                           ${actionLabel} →
+                         </a>
+                       </div>`
+                    : ""
+                }
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;border-top:1px solid #1b2940;color:#65758c;font-size:11px;line-height:1.6;">
+                Topic: ${escapeHtml(notification.event_key || "system.generic")}<br>
+                Notification ID: ${escapeHtml(notification.id)}<br>
+                Dusk Industries™ · Operational chaos, professionally documented.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>`;
 

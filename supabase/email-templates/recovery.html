@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <body style="margin:0;background:#07101b;color:#eef5ff;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07101b;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;border:1px solid #21324d;border-radius:26px;background:#0b1525;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px 18px;border-bottom:1px solid #1b2940;">
+                <img src="https://duskdawolf.com/assets/logo-graffiti.png" width="240" alt="Dusk Industries" style="display:block;max-width:100%;height:auto;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#61e8ff;">RESTRICTED CORPORATE INFRASTRUCTURE</div>
+
+                <h1 style="margin:14px 0 10px;font-size:34px;line-height:1.08;color:#ffffff;">Reset Dashboard Password</h1>
+                <p style="margin:0;color:#b8c4d6;font-size:16px;line-height:1.65;">
+                  Somebody—presumably an authorized wolf—requested a password reset for Dusk Dashboard.
+                </p>
+
+                <div style="margin:24px 0;padding:18px;border:1px solid #263854;border-radius:18px;background:#08111e;">
+                  <div style="font-size:12px;font-weight:800;color:#ff4f9b;text-transform:uppercase;letter-spacing:.15em;">CROSS-BROWSER RECOVERY</div>
+                  <p style="margin:8px 0 0;color:#9aa9bd;font-size:13px;line-height:1.55;">
+                    This v24.4.1 link uses a secure token hash, so it can be opened in a different browser or device from the one that requested it.
+                  </p>
+                </div>
+
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/reset-password"
+                   style="display:inline-block;background:#61e8ff;color:#07101b;text-decoration:none;font-weight:900;padding:14px 20px;border-radius:13px;">
+                  SET NEW PASSWORD →
+                </a>
+
+                <p style="margin:24px 0 0;color:#65758c;font-size:12px;line-height:1.55;">
+                  Requested for: {{ .Email }}
+                </p>
+
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;border-top:1px solid #1b2940;color:#65758c;font-size:11px;line-height:1.6;">
+                Dusk Industries™ · Operational chaos, professionally documented.<br>
+                If you did not request this email, you can ignore it.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

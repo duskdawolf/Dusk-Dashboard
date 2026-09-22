@@ -38,7 +38,7 @@ export function LoginForm() {
     try {
       const supabase = createBrowserSupabaseClient();
       const redirectTo =
-        `${window.location.origin}/auth/recovery?next=${encodeURIComponent("/reset-password")}`;
+        `${window.location.origin}/reset-password`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
@@ -49,7 +49,9 @@ export function LoginForm() {
         return;
       }
 
-      setStatus("Reset email sent. Use the link in that email to set your dashboard password.");
+      setStatus(
+        "Reset email sent. The v24.4.1 recovery link can be opened in another browser or device once the custom Supabase Recovery template is installed.",
+      );
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "Could not send reset email.",

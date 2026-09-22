@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+  <body style="margin:0;background:#07101b;color:#eef5ff;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#07101b;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;border:1px solid #21324d;border-radius:26px;background:#0b1525;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 28px 18px;border-bottom:1px solid #1b2940;">
+                <img src="https://duskdawolf.com/assets/logo-graffiti.png" width="240" alt="Dusk Industries" style="display:block;max-width:100%;height:auto;">
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 28px;">
+                <div style="font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#61e8ff;">RESTRICTED CORPORATE INFRASTRUCTURE</div>
+
+                <h1 style="margin:14px 0 10px;font-size:34px;line-height:1.08;color:#ffffff;">Confirm Your Dusk Account</h1>
+                <p style="margin:0;color:#b8c4d6;font-size:16px;line-height:1.65;">
+                  Confirm this email address to activate the account.
+                </p>
+
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/dashboard"
+                   style="display:inline-block;margin-top:26px;background:#61e8ff;color:#07101b;text-decoration:none;font-weight:900;padding:14px 20px;border-radius:13px;">
+                  CONFIRM ACCOUNT →
+                </a>
+
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 28px;border-top:1px solid #1b2940;color:#65758c;font-size:11px;line-height:1.6;">
+                Dusk Industries™ · Operational chaos, professionally documented.<br>
+                If you did not request this email, you can ignore it.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
