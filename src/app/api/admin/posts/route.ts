@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDashboardUser } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { notifyAdmins } from "@/lib/notifications";
+import { platformIsConfigured, platformIsLive } from "@/lib/social/providers";
 
 const PlatformSchema = z.enum([
   "telegram",
@@ -57,6 +58,80 @@ async function authorized() {
   return await getDashboardUser();
 }
 
+function validateScheduledPayload(input: {
+  masterCaption: string;
+  platforms: z.infer<typeof PlatformInputSchema>[];
+  mediaIds: string[];
+}) {
+  const errors: string[] = [];
+  const livePlatforms = input.platforms.filter((platform) =>
+    platformIsLive(platform.platform),
+  );
+
+  if (!livePlatforms.length) {
+    errors.push(
+      "At least one selected destination must have a live provider before this post can be Scheduled.",
+    );
+  }
+
+  for (const platform of livePlatforms) {
+    if (!platformIsConfigured(platform.platform)) {
+      errors.push(
+        `${platform.platform} is live but not configured in Vercel.`,
+      );
+    }
+
+    if (platform.platform === "telegram") {
+      const caption =
+        platform.captionOverride?.trim() || input.masterCaption.trim();
+
+      if (caption.length > 4096) {
+        errors.push(
+          `Telegram text is ${caption.length} characters; maximum is 4096.`,
+        );
+      }
+
+      if (input.mediaIds.length > 10) {
+        errors.push(
+          "Telegram supports at most 10 media items in a v25.0 publishing job.",
+        );
+      }
+    }
+  }
+
+  return errors;
+}
+
+async function validateExistingPostForScheduling(postId: string) {
+  const supabase = createAdminSupabaseClient();
+
+  const { data: post, error } = await supabase
+    .from("posts")
+    .select(`
+      id,
+      master_caption,
+      post_media(id),
+      post_platforms(platform, platform_caption_override, status)
+    `)
+    .eq("id", postId)
+    .maybeSingle();
+
+  if (error || !post) {
+    return [error?.message ?? "Social post not found."];
+  }
+
+  return validateScheduledPayload({
+    masterCaption: post.master_caption ?? "",
+    mediaIds: (post.post_media ?? []).map((row: any) => row.id),
+    platforms: (post.post_platforms ?? [])
+      .filter((row: any) => row.status !== "published")
+      .map((row: any) => ({
+        platform: row.platform,
+        captionOverride: row.platform_caption_override,
+      })),
+  });
+}
+
 async function replacePostMedia(postId: string, mediaIds: string[]) {
   const supabase = createAdminSupabaseClient();
   await supabase.from("post_media").delete().eq("post_id", postId);
@@ -104,11 +179,15 @@ async function replacePlatforms(
       (row) => row.platform === platform.platform
     );
 
+    const live = platformIsLive(platform.platform);
+
     const platformStatus =
       current?.status === "published"
         ? "published"
         : status === "scheduled"
-          ? "scheduled"
+          ? live
+            ? "scheduled"
+            : "approved"
           : status === "approved"
             ? "approved"
             : "draft";
@@ -118,7 +197,8 @@ async function replacePlatforms(
       platform: platform.platform,
       platform_caption_override: platform.captionOverride || null,
       status: platformStatus,
-      scheduled_at: status === "scheduled" ? scheduledAt : null,
+      scheduled_at:
+        status === "scheduled" && live ? scheduledAt : null,
       last_error: null,
     };
 
@@ -186,6 +266,21 @@ export async function POST(request: Request) {
   }
 
   const input = parsed.data;
+
+  if (input.status === "scheduled") {
+    const scheduleErrors = validateScheduledPayload(input);
+
+    if (scheduleErrors.length) {
+      return NextResponse.json(
+        {
+          error: "This publishing plan is not ready to schedule.",
+          detail: scheduleErrors.join(" "),
+        },
+        { status: 400 },
+      );
+    }
+  }
+
   if (input.status === "scheduled" && !input.scheduledAt) {
     return NextResponse.json(
       { error: "A scheduled post needs a scheduled time." },
@@ -336,6 +431,20 @@ export async function PATCH(request: Request) {
   }
 
   if (input.action === "transition") {
+    if (input.status === "scheduled") {
+      const scheduleErrors = await validateExistingPostForScheduling(input.id);
+
+      if (scheduleErrors.length) {
+        return NextResponse.json(
+          {
+            error: "This publishing plan is not ready to schedule.",
+            detail: scheduleErrors.join(" "),
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     if (input.status === "scheduled" && !input.scheduledAt) {
       return NextResponse.json(
         { error: "A scheduled post needs a scheduled time." },
@@ -367,26 +476,54 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const { error: platformError } = await supabase
+    const { data: platformRows, error: platformLoadError } = await supabase
       .from("post_platforms")
-      .update({
-        status:
-          input.status === "scheduled"
-            ? "scheduled"
-            : input.status === "approved"
-              ? "approved"
-              : "draft",
-        scheduled_at: scheduledAt,
-        last_error: null,
-      })
-      .eq("post_id", input.id)
-      .neq("status", "published");
+      .select("id,platform,status")
+      .eq("post_id", input.id);
 
-    if (platformError) {
+    if (platformLoadError) {
       return NextResponse.json(
-        { error: "Could not update platform queue.", detail: platformError.message },
-        { status: 500 }
+        {
+          error: "Could not load platform queue.",
+          detail: platformLoadError.message,
+        },
+        { status: 500 },
       );
+    }
+
+    for (const platformRow of platformRows ?? []) {
+      if (platformRow.status === "published") continue;
+
+      const live = platformIsLive(platformRow.platform);
+
+      const nextPlatformStatus =
+        input.status === "scheduled"
+          ? live
+            ? "scheduled"
+            : "approved"
+          : input.status === "approved"
+            ? "approved"
+            : "draft";
+
+      const { error: platformError } = await supabase
+        .from("post_platforms")
+        .update({
+          status: nextPlatformStatus,
+          scheduled_at:
+            input.status === "scheduled" && live ? scheduledAt : null,
+          last_error: null,
+        })
+        .eq("id", platformRow.id);
+
+      if (platformError) {
+        return NextResponse.json(
+          {
+            error: "Could not update platform queue.",
+            detail: platformError.message,
+          },
+          { status: 500 },
+        );
+      }
     }
 
     if (input.status === "approved") {
@@ -416,6 +553,20 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ ok: true });
+  }
+
+  if (input.status === "scheduled") {
+    const scheduleErrors = validateScheduledPayload(input);
+
+    if (scheduleErrors.length) {
+      return NextResponse.json(
+        {
+          error: "This publishing plan is not ready to schedule.",
+          detail: scheduleErrors.join(" "),
+        },
+        { status: 400 },
+      );
+    }
   }
 
   if (input.status === "scheduled" && !input.scheduledAt) {

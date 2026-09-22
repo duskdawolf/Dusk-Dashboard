@@ -1,95 +1,68 @@
-# Upgrade Dusk Industries v22 → v24.3
+# Upgrade Dusk Industries v22 → v25.0
 
-This package is cumulative. You do not need to install the intermediate v24
-releases one by one.
+The v25.0 package is cumulative at the code level, but an existing v22 Supabase
+database needs the later migrations.
 
 ## 1 — Update code
 
-Replace the v22 project files with v24.3, keeping the existing Git repository.
+Replace v22 code with v25.0 while keeping the Git repository.
 
-Commit/push `main`; Vercel should deploy automatically.
+Push `main` after the database/environment work below is ready.
 
-## 2 — Run these SQL migrations in order
-
-### First: Social Ops queue
+## 2 — Run SQL migrations in order
 
 ```text
-supabase/migrations/20260922_v24_2_social_ops.sql
+1. supabase/migrations/20260922_v24_2_social_ops.sql
+2. supabase/migrations/20260922_v24_3_notification_ops.sql
+3. supabase/migrations/20260922_v25_0_live_social.sql
 ```
 
-### Second: Notification Ops
+The v24.4 / v24.4.1 / v24.4.2 releases did not require SQL migrations.
+
+Do not rerun the full schema over an already initialized v22 database.
+
+## 3 — Auth + Resend
+
+Follow the existing:
+- `RESEND_SETUP.md`
+- `AUTH_EMAIL_TEMPLATES.md`
+
+Install the branded Supabase Auth templates, including Reauthentication.
+
+## 4 — PWA notifications
+
+Configure the VAPID environment variables from the v24.3 guide if you have not
+already done so.
+
+## 5 — Telegram v25.0
+
+Follow:
 
 ```text
-supabase/migrations/20260922_v24_3_notification_ops.sql
+TELEGRAM_SOCIAL_SETUP.md
 ```
 
-Run each entire file in Supabase → SQL Editor.
-
-Do not rerun the full cumulative schema if the v22 database is already
-initialized.
-
-## 3 — Existing environment variables
-
-Keep:
+Required Vercel values:
 
 ```text
-DUSK_ADMIN_EMAILS
-MAKE_WEBHOOK_SECRET
-DUSK_HOME_TIMEZONE
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SECRET_KEY
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
 ```
 
-Older Supabase aliases remain supported.
+Then create the Make Social Dispatcher scenario.
 
-For phone push, also configure:
+## 6 — Verify
+
+Check:
 
 ```text
-NEXT_PUBLIC_VAPID_PUBLIC_KEY
-VAPID_PRIVATE_KEY
-VAPID_SUBJECT
-```
-
-Generate VAPID keys with:
-
-```bash
-npx web-push generate-vapid-keys
-```
-
-## 4 — Supabase auth redirects
-
-Keep these allowed:
-
-```text
-https://duskdawolf.com/auth/callback
-https://duskdawolf.com/auth/recovery
-```
-
-## 5 — Verify v24.3
-
-Test:
-
-```text
+/dashboard/events
+/dashboard/media
+/dashboard/case-studies
 /dashboard/posts
+/dashboard/con-prep
 /dashboard/notifications
+/dashboard/account
 ```
 
-In Notifications:
-1. open Routing Preferences
-2. choose your notification mix
-3. install Dusk Ops to iPhone Home Screen
-4. enable phone notifications
-5. send a test notification
-
-## 6 — Optional hourly Make sweep
-
-Call once per hour:
-
-```text
-POST https://duskdawolf.com/api/integrations/make/notification-sweep
-Authorization: Bearer <MAKE_WEBHOOK_SECRET>
-```
-
-This generates time-sensitive event, con-prep, travel, printing, hotel, and
-Social Ops reminders while respecting dedupe and your granular preferences.
+The global footer should show `v25.0`.

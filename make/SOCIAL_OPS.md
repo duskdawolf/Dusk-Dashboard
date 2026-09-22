@@ -1,61 +1,93 @@
-# Dusk Industries v24.2 — Social Ops / Make Contract
+# Dusk Industries v25.0 — Live Social Ops / Make Contract
 
-v24.2 creates the publishing queue. v25.0 is where live provider publishing
-gets connected.
-
-## Source of truth
-
-Supabase stays authoritative.
+## v25.0 provider state
 
 ```text
-Dashboard
-  ↓
-Supabase post + platform rows
-  ↓
-Make reads due jobs
-  ↓
-Provider publishes
-  ↓
-Make posts a receipt
-  ↓
-Supabase records URL / provider ID / failure
+Telegram   LIVE
+X          staged for v25.1
+Instagram  staged for v25.2
+Snapchat   staged for v25.3
 ```
 
-Make is the courier, not the database.
+## Telegram dispatcher
 
-## Publishing queue
+Make acts as the publishing clock.
+
+Recommended scenario:
 
 ```text
-GET https://duskdawolf.com/api/integrations/make/social-jobs
-Authorization: Bearer <MAKE_WEBHOOK_SECRET>
+Schedule every 1–5 minutes
+        ↓
+HTTP POST
+https://duskdawolf.com/api/integrations/make/social-dispatch
+        ↓
+Dusk claims due Telegram jobs
+        ↓
+Dusk publishes through Telegram Bot API
+        ↓
+Dusk stores provider receipt
+        ↓
+Dusk creates publish/failure notifications
 ```
 
-Only platform jobs that are:
-- `status = scheduled`
-- due at or before the current time
-
-are returned.
-
-Draft and Approved records are deliberately invisible to the publishing queue.
-
-Each job includes:
-- platform row ID
-- post ID
-- platform
-- platform-specific caption, with master-caption fallback
-- scheduled time
-- related event
-- ordered media URLs and media metadata
-
-## Publishing receipt
+Request:
 
 ```text
-POST https://duskdawolf.com/api/integrations/make/social-jobs
+POST https://duskdawolf.com/api/integrations/make/social-dispatch
 Authorization: Bearer <MAKE_WEBHOOK_SECRET>
 Content-Type: application/json
 ```
 
-Success:
+Body:
+
+```json
+{}
+```
+
+A successful no-work response:
+
+```json
+{
+  "ok": true,
+  "dispatched": 0,
+  "results": []
+}
+```
+
+The dispatcher includes:
+- conditional job claim to prevent duplicate sends
+- up to 10 due Telegram jobs per run
+- provider validation
+- up to 3 transient-error attempts
+- retry-after support
+- published receipt storage
+- parent-post reconciliation
+- Notification Ops integration
+
+## Generic provider queue
+
+The v24.2 generic provider queue remains for future provider adapters:
+
+```text
+GET /api/integrations/make/social-jobs
+POST /api/integrations/make/social-jobs
+```
+
+By default, `GET /social-jobs` now excludes Telegram because Telegram is owned by
+the v25.0 dispatcher.
+
+For debugging/backwards compatibility only:
+
+```text
+GET /api/integrations/make/social-jobs?includeTelegram=1
+```
+
+Do not run a second Telegram publishing scenario against that generic queue or
+you risk duplicate publishing.
+
+## Generic publishing receipt
+
+Future X/Instagram Make/provider adapters can post:
 
 ```json
 {
@@ -63,7 +95,11 @@ Success:
   "status": "published",
   "platformPostId": "provider-id",
   "postUrl": "https://...",
-  "makeJobId": "optional-make-run-id",
+  "providerAccount": "@account",
+  "publishedCaption": "actual caption",
+  "publishedMedia": [],
+  "providerResponse": {},
+  "makeJobId": "optional-run-id",
   "publishedAt": "2026-09-22T20:15:00-04:00"
 }
 ```
@@ -74,48 +110,19 @@ Failure:
 {
   "platformId": "uuid",
   "status": "failed",
-  "makeJobId": "optional-make-run-id",
   "errorMessage": "Provider rejected the media upload."
 }
 ```
 
-The parent post reconciles automatically:
-- all platforms published → `published`
-- failed platforms with nothing pending → `failed`
-- mixed success/failure → `partial_failure`
+## Analytics
 
-## Analytics capture
+The existing metrics endpoint remains:
 
 ```text
-POST https://duskdawolf.com/api/integrations/make/social-metrics
-Authorization: Bearer <MAKE_WEBHOOK_SECRET>
+POST /api/integrations/make/social-metrics
 ```
 
-Example:
-
-```json
-{
-  "platformId": "uuid",
-  "reach": 1842,
-  "impressions": 2204,
-  "likes": 167,
-  "comments": 21,
-  "shares": 14,
-  "saves": 9,
-  "clicks": 5,
-  "videoViews": 0,
-  "followersGained": 3
-}
-```
-
-Each call stores a new timestamped snapshot rather than overwriting history.
-
-## Planned v25.0 provider order
-
-1. Telegram
-2. X
-3. Instagram
-4. Snapchat assisted handoff
-
-Do not enable a live provider scenario until its authentication and media rules
-have been tested against a private/test destination.
+Telegram Bot API publishing does not provide the richer organic reach/engagement
+analytics Dusk ultimately wants, so v25.0 treats Telegram analytics capability as
+unavailable while preserving the metrics architecture for X/Instagram and later
+analytics work.

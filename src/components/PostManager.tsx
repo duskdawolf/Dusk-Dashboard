@@ -44,6 +44,10 @@ type PlatformRow = {
   post_url: string | null;
   last_error: string | null;
   attempt_count: number;
+  provider_account?: string | null;
+  published_caption?: string | null;
+  published_media?: unknown[];
+  provider_response?: Record<string, unknown>;
   post_metrics?: MetricRow[];
 };
 
@@ -70,12 +74,28 @@ type PostRow = {
 
 const PLATFORM_META: Record<
   PlatformName,
-  { label: string; note: string }
+  { label: string; note: string; live: boolean }
 > = {
-  telegram: { label: "Telegram", note: "Bot/channel publishing" },
-  twitter: { label: "X", note: "Prepared for X API publishing" },
-  instagram: { label: "Instagram", note: "Prepared for Meta publishing" },
-  snapchat: { label: "Snapchat", note: "Prepared assisted handoff" },
+  telegram: {
+    label: "Telegram",
+    note: "LIVE in v25.0 · text, photo, video, albums",
+    live: true,
+  },
+  twitter: {
+    label: "X",
+    note: "Draft/Approved only · live provider planned for v25.1",
+    live: false,
+  },
+  instagram: {
+    label: "Instagram",
+    note: "Draft/Approved only · live provider planned for v25.2",
+    live: false,
+  },
+  snapchat: {
+    label: "Snapchat",
+    note: "Draft/Approved only · assisted handoff planned for v25.3",
+    live: false,
+  },
 };
 
 const PLATFORMS = Object.keys(PLATFORM_META) as PlatformName[];
@@ -204,8 +224,6 @@ export function PostManager({
   const [scheduledAt, setScheduledAt] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<PlatformName[]>([
     "telegram",
-    "twitter",
-    "instagram",
   ]);
   const [captionOverrides, setCaptionOverrides] = useState<
     Partial<Record<PlatformName, string>>
@@ -228,6 +246,64 @@ export function PostManager({
   const selectedMedia = mediaIds
     .map((id) => media.find((item) => item.id === id))
     .filter(Boolean) as MediaOption[];
+
+  const scheduleIssues = useMemo(() => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (postStatus !== "scheduled") {
+      return { errors, warnings };
+    }
+
+    const liveSelected = selectedPlatforms.filter(
+      (platform) => PLATFORM_META[platform].live,
+    );
+
+    if (!liveSelected.length) {
+      errors.push(
+        "Choose at least one live provider before scheduling. Telegram is the live v25.0 provider.",
+      );
+    }
+
+    for (const platform of selectedPlatforms) {
+      if (!PLATFORM_META[platform].live) {
+        warnings.push(
+          `${PLATFORM_META[platform].label} will stay staged as Approved while the live provider(s) publish. Its caption/media variant is preserved for the upcoming provider release.`,
+        );
+      }
+    }
+
+    if (selectedPlatforms.includes("telegram")) {
+      const telegramCaption =
+        captionOverrides.telegram?.trim() || masterCaption.trim();
+
+      if (telegramCaption.length > 4096) {
+        errors.push(
+          `Telegram text is ${telegramCaption.length} characters; maximum is 4096.`,
+        );
+      }
+
+      if (selectedMedia.length > 10) {
+        errors.push(
+          `Telegram accepts at most 10 media items in one v25.0 publishing job.`,
+        );
+      }
+
+      if (selectedMedia.length > 0 && telegramCaption.length > 1024) {
+        warnings.push(
+          "Telegram media captions are limited to 1024 characters. Dusk will publish the media first and your full caption as a separate message.",
+        );
+      }
+    }
+
+    return { errors, warnings };
+  }, [
+    postStatus,
+    selectedPlatforms,
+    captionOverrides.telegram,
+    masterCaption,
+    selectedMedia.length,
+  ]);
 
   const grouped = useMemo(() => {
     const buckets: Record<PostStatus, PostRow[]> = {
@@ -260,7 +336,7 @@ export function PostManager({
     setMasterCaption("");
     setPostStatus("draft");
     setScheduledAt("");
-    setSelectedPlatforms(["telegram", "twitter", "instagram"]);
+    setSelectedPlatforms(["telegram"]);
     setCaptionOverrides({});
     setMediaIds([]);
   }
@@ -330,6 +406,11 @@ export function PostManager({
 
     if (!selectedPlatforms.length) {
       setStatusMessage("Choose at least one platform.");
+      return;
+    }
+
+    if (postStatus === "scheduled" && scheduleIssues.errors.length) {
+      setStatusMessage(scheduleIssues.errors.join(" "));
       return;
     }
 
@@ -468,9 +549,10 @@ export function PostManager({
               {editingId ? "Edit Publishing Plan" : "Compose Publishing Plan"}
             </h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Draft here, approve deliberately, schedule intentionally. v24.2
-              creates the publishing queue, but nothing leaves Dusk Industries
-              unless a post is explicitly placed in Scheduled.
+              Draft here, approve deliberately, schedule intentionally. In v25.0
+              Telegram is live: a Scheduled Telegram job can leave Dusk Industries
+              when the Make dispatcher runs. X, Instagram, and Snapchat remain
+              Draft/Approved until their provider releases.
             </p>
           </div>
 
@@ -633,7 +715,18 @@ export function PostManager({
                           : "border-dusk-line bg-white/[0.025]"
                       }`}
                     >
-                      <strong>{meta.label}</strong>
+                      <div className="flex items-center justify-between gap-2">
+                        <strong>{meta.label}</strong>
+                        <span
+                          className={`rounded-full border px-2 py-1 text-[9px] font-black uppercase ${
+                            meta.live
+                              ? "border-dusk-aqua/30 text-dusk-aqua"
+                              : "border-white/10 text-slate-600"
+                          }`}
+                        >
+                          {meta.live ? "LIVE" : "STAGED"}
+                        </span>
+                      </div>
                       <span className="mt-1 block text-xs text-slate-500">
                         {meta.note}
                       </span>
@@ -697,16 +790,45 @@ export function PostManager({
               </label>
             </div>
 
+            {postStatus === "scheduled" &&
+            (scheduleIssues.errors.length || scheduleIssues.warnings.length) ? (
+              <div className="space-y-2">
+                {scheduleIssues.errors.map((issue) => (
+                  <div
+                    key={issue}
+                    className="rounded-xl border border-dusk-pink/25 bg-dusk-pink/5 p-3 text-sm text-dusk-pink"
+                  >
+                    {issue}
+                  </div>
+                ))}
+                {scheduleIssues.warnings.map((issue) => (
+                  <div
+                    key={issue}
+                    className="rounded-xl border border-dusk-gold/20 bg-dusk-gold/5 p-3 text-sm text-slate-300"
+                  >
+                    {issue}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
             <div className="rounded-2xl border border-dusk-gold/20 bg-dusk-gold/5 p-4 text-sm text-slate-300">
               <strong>Safety rail:</strong> Draft and Approved records never
-              appear in the Make publishing queue. Only Scheduled platform jobs
-              whose scheduled time has arrived are eligible.
+              publish. In v25.0, only the Telegram destination becomes Scheduled
+              and dispatchable. X, Instagram, and Snapchat variants remain
+              preserved as Approved until their providers go live.
             </div>
 
-            <button className="button-primary w-full" type="submit">
+            <button
+              className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
+              type="submit"
+              disabled={postStatus === "scheduled" && scheduleIssues.errors.length > 0}
+            >
               {editingId
                 ? "Update publishing plan"
-                : "Save publishing plan"}
+                : postStatus === "scheduled"
+                  ? "Schedule live publishing"
+                  : "Save publishing plan"}
             </button>
 
             {statusMessage ? (
@@ -820,6 +942,25 @@ export function PostManager({
                         <p className="mt-2 text-[11px] text-slate-600">
                           {new Date(post.scheduled_at).toLocaleString()}
                         </p>
+                      ) : null}
+
+                      {(post.post_platforms ?? []).some(
+                        (platform) =>
+                          platform.provider_account || platform.attempt_count > 0,
+                      ) ? (
+                        <div className="mt-2 space-y-1 text-[10px] text-slate-600">
+                          {(post.post_platforms ?? []).map((platform) => (
+                            <div key={`${platform.id}-receipt`}>
+                              {platformLabel(platform.platform)}
+                              {platform.provider_account
+                                ? ` · ${platform.provider_account}`
+                                : ""}
+                              {platform.attempt_count
+                                ? ` · ${platform.attempt_count} attempt${platform.attempt_count === 1 ? "" : "s"}`
+                                : ""}
+                            </div>
+                          ))}
+                        </div>
                       ) : null}
 
                       {post.status === "published" ? (

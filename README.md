@@ -1,3 +1,112 @@
+# Dusk Industries™ v25.0 — Live Social Publishing Core + Telegram
+
+v25.0 crosses the boundary from Social Ops planning into real provider
+publishing.
+
+## Live provider
+
+```text
+Telegram   LIVE
+X          v25.1
+Instagram  v25.2
+Snapchat   v25.3 assisted handoff
+```
+
+## Live flow
+
+```text
+Draft
+  ↓
+Approved
+  ↓
+Scheduled
+  ↓
+Make dispatcher
+  ↓
+Dusk provider adapter
+  ↓
+Telegram Bot API
+  ↓
+Published / Failed
+  ↓
+provider receipt + Notification Ops
+```
+
+## Provider architecture
+
+New reusable Social Ops provider layer:
+
+```text
+src/lib/social/types.ts
+src/lib/social/providers.ts
+src/lib/social/telegram.ts
+src/lib/social/jobs.ts
+src/lib/social/reconcile.ts
+```
+
+The architecture separates:
+- canonical Social Ops data
+- provider validation
+- provider publishing
+- provider receipt storage
+- parent post reconciliation
+- Notification Ops
+
+## Telegram publishing
+
+Supports:
+- text
+- single photo
+- single video
+- 2–10 item photo/video albums
+- mixed photo/video albums
+- long-caption fallback to separate text message
+
+The Telegram Bot API allows 2–10 items in `sendMediaGroup`, text messages up to
+4096 characters, and media captions up to 1024 characters.
+
+## Concurrency + retries
+
+The dispatcher conditionally claims Scheduled jobs as `publishing` before calling
+Telegram to reduce duplicate sends from overlapping Make runs.
+
+Transient failures receive up to 3 attempts with backoff / Telegram retry-after
+support.
+
+## Provider status
+
+`/dashboard/posts` now includes a live Publishing Providers panel with:
+- configured state
+- connection test
+- bot account
+- target
+- capabilities
+- one-click Telegram provider test
+
+## Staged platform variants
+
+X/Instagram/Snapchat variants can remain attached to a canonical post while
+Telegram publishes. Non-live destinations remain Approved rather than being
+discarded.
+
+## SQL
+
+Run:
+
+```text
+supabase/migrations/20260922_v25_0_live_social.sql
+```
+
+## Setup
+
+```text
+UPGRADE_FROM_V24_4_2.md
+TELEGRAM_SOCIAL_SETUP.md
+make/SOCIAL_OPS.md
+```
+
+---
+
 # Dusk Industries™ v24.4.2 — Reauthentication + Global Version Footer
 
 Final v24 infrastructure release before v25 Social Publishing.

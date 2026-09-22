@@ -1,4 +1,5 @@
 import { PostManager } from "@/components/PostManager";
+import { SocialProviderPanel } from "@/components/SocialProviderPanel";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Social Ops · Dusk Dashboard" };
@@ -52,12 +53,15 @@ export default async function DashboardPostsPage({
   }
 
   return (
-    <PostManager
-      initialPosts={(posts ?? []) as never[]}
-      events={(events ?? []) as never[]}
-      media={(media ?? []) as never[]}
-      initialEventId={params.eventId ?? ""}
-      initialMediaId={params.mediaId ?? ""}
-    />
+    <div className="space-y-8">
+      <SocialProviderPanel />
+      <PostManager
+        initialPosts={(posts ?? []) as never[]}
+        events={(events ?? []) as never[]}
+        media={(media ?? []) as never[]}
+        initialEventId={params.eventId ?? ""}
+        initialMediaId={params.mediaId ?? ""}
+      />
+    </div>
   );
 }

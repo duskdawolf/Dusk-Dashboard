@@ -281,6 +281,11 @@ create table if not exists public.posts (
   approved_at timestamptz,
   automation_status text,
   make_job_id text,
+  provider_account text,
+  published_caption text,
+  published_media jsonb not null default '[]'::jsonb,
+  provider_response jsonb not null default '{}'::jsonb,
+  last_provider_check timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -307,6 +312,11 @@ create table if not exists public.post_platforms (
   last_error text,
   attempt_count integer not null default 0,
   make_job_id text,
+  provider_account text,
+  published_caption text,
+  published_media jsonb not null default '[]'::jsonb,
+  provider_response jsonb not null default '{}'::jsonb,
+  last_provider_check timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(post_id, platform)
@@ -923,3 +933,18 @@ create policy "Users can read own notification topic prefs"
   on public.notification_topic_preferences for select
   to authenticated
   using (auth.uid() = user_id);
+
+
+-- v25.0 Live Social Publishing ------------------------------------
+-- Dusk Industries v25.0
+-- Live Social Publishing: provider receipt snapshots.
+
+alter table public.post_platforms
+  add column if not exists provider_account text,
+  add column if not exists published_caption text,
+  add column if not exists published_media jsonb not null default '[]'::jsonb,
+  add column if not exists provider_response jsonb not null default '{}'::jsonb,
+  add column if not exists last_provider_check timestamptz;
+
+create index if not exists post_platforms_provider_status_idx
+  on public.post_platforms(platform, status, scheduled_at);

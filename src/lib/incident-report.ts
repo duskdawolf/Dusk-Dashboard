@@ -81,7 +81,9 @@ export async function getIncidentReport(slug: string): Promise<IncidentReport | 
       title: row.title,
       caption: row.master_caption,
       publishedAt: row.scheduled_at ?? row.approved_at ?? row.created_at ?? undefined,
-      platforms: (row.post_platforms ?? []).map((platform: any) => {
+      platforms: (row.post_platforms ?? [])
+        .filter((platform: any) => platform.status === "published")
+        .map((platform: any) => {
         const latestMetric = [...(platform.post_metrics ?? [])].sort(
           (a: any, b: any) =>
             new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime(),
