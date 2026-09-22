@@ -1,46 +1,78 @@
-"use client";
+import Link from "next/link";
+import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
-import { useMemo, useState } from "react";
-import { events, products, socialLinks } from "@/data/seed";
+export const metadata = { title: "Dusk Dashboard" };
+export const dynamic = "force-dynamic";
 
-type Tab = "overview" | "events" | "socials" | "products" | "architecture";
+export default async function DashboardPage() {
+  const supabase = createAdminSupabaseClient();
 
-export default function DashboardPage() {
-  const [tab, setTab] = useState<Tab>("overview");
-  const [eventJson, setEventJson] = useState(JSON.stringify(events, null, 2));
-  const [productJson, setProductJson] = useState(JSON.stringify(products, null, 2));
+  const [
+    { count: eventCount },
+    { count: mediaCount },
+    { count: postCount },
+    { count: prepCount },
+  ] = await Promise.all([
+    supabase.from("events").select("*", { count: "exact", head: true }),
+    supabase.from("media").select("*", { count: "exact", head: true }),
+    supabase.from("posts").select("*", { count: "exact", head: true }),
+    supabase.from("con_preps").select("*", { count: "exact", head: true }),
+  ]);
 
-  const tabs: Tab[] = ["overview", "events", "socials", "products", "architecture"];
-
-  const architecture = useMemo(() => [
-    "PostgreSQL / Supabase for structured content",
-    "Supabase Storage for photos, clips, product art, and uploads",
-    "Supabase Auth for Dusk-only dashboard access",
-    "Next.js Route Handlers for quotes, admin mutations, and Stripe webhooks",
-    "Stripe for checkout when the shop is ready",
-  ], []);
+  const modules = [
+    {
+      href: "/dashboard/events",
+      title: "Events",
+      value: eventCount ?? 0,
+      text: "Source of truth for deployments, map points, schedules, and future Make sync.",
+    },
+    {
+      href: "/dashboard/media",
+      title: "Media",
+      value: mediaCount ?? 0,
+      text: "Upload photos/video to Supabase Storage and associate them with events.",
+    },
+    {
+      href: "/dashboard/posts",
+      title: "Posts",
+      value: postCount ?? 0,
+      text: "Draft, approve, schedule, publish, and eventually analyze social content.",
+    },
+    {
+      href: "/dashboard/con-prep",
+      title: "Con Prep",
+      value: prepCount ?? 0,
+      text: "Packing, travel, prep tasks, production work, and convention logistics.",
+    },
+  ];
 
   return (
-    <main className="mx-auto w-[min(1220px,calc(100%-32px))] py-12">
-      <div className="eyebrow">Backend prototype</div>
-      <h1 className="text-5xl font-black tracking-[-.05em]">Dusk Dashboard</h1>
-      <p className="mt-4 max-w-3xl text-slate-400">This is the front-end shell for the future CMS. The repository and SQL schema in this project are already designed to replace seed data with Supabase.</p>
-
-      <div className="mt-8 flex flex-wrap gap-2">
-        {tabs.map((item) => <button key={item} onClick={() => setTab(item)} className={`rounded-xl border px-4 py-2 text-sm font-black capitalize ${tab === item ? "border-dusk-aqua/40 bg-dusk-aqua/10" : "border-dusk-line bg-white/5"}`}>{item}</button>)}
+    <section>
+      <div className="grid gap-4 md:grid-cols-2">
+        {modules.map((module) => (
+          <Link
+            key={module.href}
+            href={module.href}
+            className="card transition hover:-translate-y-1 hover:border-dusk-aqua/30"
+          >
+            <div className="eyebrow">{module.title}</div>
+            <div className="text-5xl font-black text-dusk-aqua">
+              {module.value}
+            </div>
+            <p className="mt-3 text-sm text-slate-400">{module.text}</p>
+          </Link>
+        ))}
       </div>
 
-      <section className="panel mt-6">
-        {tab === "overview" && <div className="grid gap-4 md:grid-cols-3">
-          <div className="card"><strong>Events</strong><div className="mt-2 text-5xl font-black text-dusk-aqua">{events.length}</div></div>
-          <div className="card"><strong>Products</strong><div className="mt-2 text-5xl font-black text-dusk-pink">{products.length}</div></div>
-          <div className="card"><strong>Socials</strong><div className="mt-2 text-5xl font-black text-dusk-gold">{socialLinks.length}</div></div>
-        </div>}
-        {tab === "events" && <textarea value={eventJson} onChange={(e) => setEventJson(e.target.value)} className="form-input min-h-[460px] font-mono text-xs" />}
-        {tab === "products" && <textarea value={productJson} onChange={(e) => setProductJson(e.target.value)} className="form-input min-h-[460px] font-mono text-xs" />}
-        {tab === "socials" && <div className="space-y-3">{socialLinks.map((item) => <div key={item.id} className="card flex flex-wrap justify-between gap-3"><strong>{item.name}</strong><span className="text-slate-400">{item.handle}</span><span className="text-dusk-aqua">{item.url}</span></div>)}</div>}
-        {tab === "architecture" && <div className="space-y-3">{architecture.map((item) => <div key={item} className="card">{item}</div>)}</div>}
-      </section>
-    </main>
+      <div className="panel mt-6">
+        <div className="eyebrow">Automation architecture</div>
+        <h2 className="text-2xl font-black">One record, many destinations.</h2>
+        <p className="mt-3 max-w-4xl text-slate-400">
+          The target workflow is ChatGPT → Make → Supabase + calendar +
+          communications + accounting. The website renders the same data instead
+          of maintaining its own separate copy.
+        </p>
+      </div>
+    </section>
   );
 }

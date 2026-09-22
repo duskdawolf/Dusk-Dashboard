@@ -1,47 +1,71 @@
-import { caseStudies as seedCaseStudies, events as seedEvents, products as seedProducts, socialLinks as seedSocialLinks } from "@/data/seed";
-import { createServerSupabaseClient, supabaseConfigured } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+import {
+  caseStudies as seedCaseStudies,
+  events as seedEvents,
+  products as seedProducts,
+  socialLinks as seedSocialLinks,
+} from "@/data/seed";
+import { eventRowToItem, type EventRow } from "@/lib/event-records";
+import {
+  getSupabasePublishableKey,
+  getSupabaseUrl,
+  supabasePublicConfigured,
+} from "@/lib/supabase/config";
 import type { CaseStudy, EventItem, Product, SocialLink } from "@/types";
 
-export async function getEvents(): Promise<EventItem[]> {
-  if (!supabaseConfigured()) return seedEvents;
+function publicClient() {
+  return createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
-  const supabase = createServerSupabaseClient();
+export async function getEvents(): Promise<EventItem[]> {
+  if (!supabasePublicConfigured()) return seedEvents;
+
+  const supabase = publicClient();
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .eq("published", true)
     .order("start_at", { ascending: true });
 
-  if (error || !data) return seedEvents;
+  if (error || !data || data.length === 0) return seedEvents;
 
-  return data.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    startAt: row.start_at,
-    endAt: row.end_at ?? undefined,
-    location: row.location ?? undefined,
-    description: row.description ?? "",
-    tag: row.tag ?? "Event",
-    quarter: row.quarter,
-    mapX: row.map_x ?? undefined,
-    mapY: row.map_y ?? undefined,
-  }));
+  return (data as EventRow[]).map(eventRowToItem);
 }
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
-  if (!supabaseConfigured()) return seedSocialLinks;
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.from("social_links").select("*").eq("active", true).order("sort_order");
-  if (error || !data) return seedSocialLinks;
-  return data.map((row) => ({ id: row.id, name: row.name, handle: row.handle, url: row.url }));
+  if (!supabasePublicConfigured()) return seedSocialLinks;
+
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("social_links")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order");
+
+  if (error || !data || data.length === 0) return seedSocialLinks;
+
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    handle: row.handle,
+    url: row.url,
+  }));
 }
 
 export async function getProducts(): Promise<Product[]> {
-  if (!supabaseConfigured()) return seedProducts;
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.from("products").select("*").eq("active", true).order("sort_order");
-  if (error || !data) return seedProducts;
+  if (!supabasePublicConfigured()) return seedProducts;
+
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order");
+
+  if (error || !data || data.length === 0) return seedProducts;
+
   return data.map((row) => ({
     id: row.id,
     slug: row.slug,
@@ -54,10 +78,17 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getCaseStudies(): Promise<CaseStudy[]> {
-  if (!supabaseConfigured()) return seedCaseStudies;
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.from("case_studies").select("*").eq("published", true).order("published_at", { ascending: false });
-  if (error || !data) return seedCaseStudies;
+  if (!supabasePublicConfigured()) return seedCaseStudies;
+
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("case_studies")
+    .select("*")
+    .eq("published", true)
+    .order("published_at", { ascending: false });
+
+  if (error || !data || data.length === 0) return seedCaseStudies;
+
   return data.map((row) => ({
     id: row.id,
     slug: row.slug,

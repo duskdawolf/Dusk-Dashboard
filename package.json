@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/ssr": "latest",
@@ -16,7 +17,12 @@
     "react": "latest",
     "react-dom": "latest",
     "stripe": "latest",
-    "zod": "latest"
+    "zod": "latest",
+    "d3-geo": "latest",
+    "topojson-client": "latest",
+    "us-atlas": "latest",
+    "luxon": "latest",
+    "web-push": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
@@ -25,6 +31,10 @@
     "autoprefixer": "latest",
     "postcss": "latest",
     "tailwindcss": "^3.4.17",
-    "typescript": "latest"
+    "typescript": "latest",
+    "@types/d3-geo": "latest",
+    "@types/topojson-client": "latest",
+    "@types/luxon": "latest",
+    "@types/web-push": "latest"
   }
 }

@@ -1,3 +1,6 @@
+export type EventQuarter = "q1" | "q2" | "q3" | "q4";
+export type EventType = "convention" | "meetup" | "hosting" | "public";
+
 export type EventItem = {
   id: string;
   slug: string;
@@ -5,11 +8,13 @@ export type EventItem = {
   startAt: string;
   endAt?: string;
   location?: string;
+  stateCode?: string;
+  latitude?: number;
+  longitude?: number;
   description: string;
   tag: string;
-  quarter: "q1" | "q2" | "q3" | "q4";
-  mapX?: number;
-  mapY?: number;
+  eventType: EventType;
+  quarter: EventQuarter;
 };
 
 export type SocialLink = {
@@ -38,4 +43,53 @@ export type CaseStudy = {
   challenge: string;
   solution: string;
   outcome: string;
+};
+
+export type MediaItem = {
+  id: string;
+  title: string;
+  kind: "image" | "video";
+  url: string;
+  storagePath?: string;
+  mimeType?: string;
+  altText?: string;
+  caption?: string;
+  eventId?: string;
+  published: boolean;
+  createdAt?: string;
+};
+
+export type PostStatus =
+  | "draft"
+  | "approved"
+  | "scheduled"
+  | "published"
+  | "failed";
+
+export type SocialPlatform =
+  | "telegram"
+  | "twitter"
+  | "instagram"
+  | "snapchat";
+
+export type SocialPost = {
+  id: string;
+  eventId?: string;
+  title: string;
+  masterCaption: string;
+  status: PostStatus;
+  scheduledAt?: string;
+  approvedAt?: string;
+  automationStatus?: string;
+  createdAt?: string;
+};
+
+export type ConPrep = {
+  id: string;
+  eventId: string;
+  status: "planning" | "ready" | "traveling" | "complete";
+  targetArrivalAt?: string;
+  leaveForAirportAt?: string;
+  packingDeadline?: string;
+  notes?: string;
 };

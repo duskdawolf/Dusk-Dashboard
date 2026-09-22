@@ -29,3 +29,12 @@ body {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: -120; }
 }
+
+.map-route-line {
+  animation: map-route-march 14s linear infinite;
+}
+
+@keyframes map-route-march {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -180; }
+}

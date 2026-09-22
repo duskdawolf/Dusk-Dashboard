@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerSupabaseClient, supabaseConfigured } from "@/lib/supabase/server";
+import {
+  createAdminSupabaseClient,
+  supabaseAdminConfigured,
+} from "@/lib/supabase/server";
 
 const QuoteSchema = z.object({
   name: z.string().min(1).max(120),
@@ -15,18 +18,22 @@ export async function POST(request: Request) {
   const parsed = QuoteSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid quote request.", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid quote request.", details: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
 
-  if (!supabaseConfigured()) {
+  if (!supabaseAdminConfigured()) {
     return NextResponse.json({
       ok: true,
       mock: true,
-      message: "Quote validated. Supabase is not configured yet, so this was not persisted.",
+      message:
+        "Quote validated. Supabase server credentials are not configured yet, so this was not persisted.",
     });
   }
 
-  const supabase = createServerSupabaseClient();
+  const supabase = createAdminSupabaseClient();
   const { error } = await supabase.from("print_quotes").insert({
     customer_name: parsed.data.name,
     contact: parsed.data.contact,
@@ -38,8 +45,14 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json({ error: "Could not save quote request." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Could not save quote request.", detail: error.message },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ ok: true, message: "Quote request received by Dusk Sticker Factory." });
+  return NextResponse.json({
+    ok: true,
+    message: "Quote request received by Dusk Sticker Factory.",
+  });
 }
