@@ -236,7 +236,7 @@ export async function getTelegramProviderStatus(): Promise<SocialProviderStatus>
     connected: false,
     target: cfg.chatId || null,
     detail:
-      "v25.1 live provider. Text, single media, and 2–10 item photo/video albums are supported.",
+      "Live Telegram provider. Text, single media, and 2–10 item photo/video albums are supported.",
     capabilities: {
       text: true,
       photo: true,

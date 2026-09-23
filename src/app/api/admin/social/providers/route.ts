@@ -27,7 +27,7 @@ async function telegramTestMessage() {
       body: JSON.stringify({
         chat_id: chatId,
         text:
-          "🐾 Dusk Industries Social Ops provider test\n\nTelegram v25.1 connection is operational.",
+          "🐾 Dusk Industries Social Ops provider test\n\nTelegram v25.2 connection is operational.",
         ...(process.env.TELEGRAM_MESSAGE_THREAD_ID
           ? {
               message_thread_id: Number(
@@ -68,8 +68,8 @@ export async function GET() {
 
   return NextResponse.json({
     providers,
-    livePlatforms: ["telegram", "twitter"],
-    version: "25.1",
+    livePlatforms: ["telegram", "twitter", "instagram"],
+    version: "25.2",
   });
 }
 

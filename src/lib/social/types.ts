@@ -21,6 +21,8 @@ export type SocialPublishJob = {
   title: string;
   caption: string;
   scheduledAt: string | null;
+  includeDeploymentLink?: boolean;
+  providerState?: Record<string, unknown>;
   event?: {
     id: string;
     slug: string;

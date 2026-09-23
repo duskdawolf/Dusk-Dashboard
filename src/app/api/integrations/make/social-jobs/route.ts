@@ -80,12 +80,13 @@ export async function GET(request: Request) {
     .eq("status", "scheduled")
     .lte("scheduled_at", now);
 
-  // v25.1 Telegram and X are handled by /social-dispatch to avoid duplicate sends.
+  // v25.2 Telegram, X, and Instagram are handled by /social-dispatch to avoid duplicate sends.
   // The generic jobs endpoint remains available for future provider adapters.
   if (!includeLive) {
     query = query
       .neq("platform", "telegram")
-      .neq("platform", "twitter");
+      .neq("platform", "twitter")
+      .neq("platform", "instagram");
   }
 
   const { data, error } = await query
@@ -126,7 +127,7 @@ export async function GET(request: Request) {
     jobs,
     note: includeLive
       ? "Live providers included explicitly."
-      : "Telegram and X are excluded because v25.1 dispatches both through /api/integrations/make/social-dispatch.",
+      : "Telegram, X, and Instagram are excluded because v25.2 dispatches all live providers through /api/integrations/make/social-dispatch.",
   });
 }
 

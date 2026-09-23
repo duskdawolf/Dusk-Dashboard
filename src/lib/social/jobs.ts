@@ -1,5 +1,6 @@
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import type { SocialPublishJob } from "@/lib/social/types";
+import { withDeploymentLink } from "@/lib/social/deployment-link";
 
 export async function loadSocialPublishJob(
   platformId: string,
@@ -14,10 +15,12 @@ export async function loadSocialPublishJob(
       platform,
       platform_caption_override,
       scheduled_at,
+      provider_response,
       posts!inner (
         id,
         title,
         master_caption,
+        include_deployment_link,
         events (
           id,
           slug,
@@ -50,14 +53,26 @@ export async function loadSocialPublishJob(
     .map((join: any) => join.media)
     .filter(Boolean);
 
+  const baseCaption =
+    data.platform_caption_override || post?.master_caption || "";
+
   return {
     platformId: data.id,
     postId: data.post_id,
     platform: data.platform as SocialPublishJob["platform"],
     title: post?.title ?? "Untitled social post",
-    caption:
-      data.platform_caption_override || post?.master_caption || "",
+    caption: withDeploymentLink(
+      baseCaption,
+      post?.events ?? null,
+      Boolean(post?.include_deployment_link),
+    ),
     scheduledAt: data.scheduled_at,
+    includeDeploymentLink: Boolean(post?.include_deployment_link),
+    providerState:
+      data.provider_response &&
+      typeof data.provider_response === "object"
+        ? data.provider_response
+        : {},
     event: post?.events ?? null,
     media,
   };

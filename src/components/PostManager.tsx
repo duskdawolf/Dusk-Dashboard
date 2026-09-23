@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { deploymentDocumentLabel, deploymentDocumentUrl } from "@/lib/social/deployment-link";
 
 type PlatformName = "telegram" | "twitter" | "instagram" | "snapchat";
 type PostStatus = "draft" | "approved" | "scheduled" | "published" | "failed";
@@ -63,6 +64,7 @@ type PostRow = {
   event_id: string | null;
   title: string;
   master_caption: string;
+  include_deployment_link?: boolean;
   status: PostStatus;
   scheduled_at: string | null;
   approved_at: string | null;
@@ -79,18 +81,18 @@ const PLATFORM_META: Record<
 > = {
   telegram: {
     label: "Telegram",
-    note: "LIVE in v25.1 · text, photo, video, albums",
+    note: "LIVE · text, photo, video, albums",
     live: true,
   },
   twitter: {
     label: "X",
-    note: "LIVE in v25.1 · OAuth 2.0 · text, up to 4 photos, 1 video/GIF",
+    note: "LIVE · OAuth 2.0 · text, up to 4 photos, 1 video/GIF",
     live: true,
   },
   instagram: {
     label: "Instagram",
-    note: "Draft/Approved only · live provider planned for v25.2",
-    live: false,
+    note: "LIVE in v25.2 · photos, Reels, 2–10 item carousels",
+    live: true,
   },
   snapchat: {
     label: "Snapchat",
@@ -217,6 +219,7 @@ export function PostManager({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [eventId, setEventId] = useState(initialEventId);
+  const [includeDeploymentLink, setIncludeDeploymentLink] = useState(false);
   const [title, setTitle] = useState("");
   const [masterCaption, setMasterCaption] = useState("");
   const [postStatus, setPostStatus] = useState<
@@ -248,6 +251,22 @@ export function PostManager({
     .map((id) => media.find((item) => item.id === id))
     .filter(Boolean) as MediaOption[];
 
+  const selectedEvent =
+    events.find((event) => event.id === eventId) ?? null;
+
+  const deploymentSuffix =
+    includeDeploymentLink && selectedEvent
+      ? `\n\n${deploymentDocumentLabel(selectedEvent)}: ${deploymentDocumentUrl(
+          selectedEvent,
+        )}`
+      : "";
+
+  function finalCaption(platform: PlatformName) {
+    return `${
+      captionOverrides[platform]?.trim() || masterCaption.trim()
+    }${deploymentSuffix}`;
+  }
+
   const scheduleIssues = useMemo(() => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -262,7 +281,7 @@ export function PostManager({
 
     if (!liveSelected.length) {
       errors.push(
-        "Choose at least one live provider before scheduling. Telegram and X are live in v25.1.",
+        "Choose at least one live provider before scheduling. Telegram, X, and Instagram are live in v25.2.",
       );
     }
 
@@ -275,8 +294,7 @@ export function PostManager({
     }
 
     if (selectedPlatforms.includes("telegram")) {
-      const telegramCaption =
-        captionOverrides.telegram?.trim() || masterCaption.trim();
+      const telegramCaption = finalCaption("telegram");
 
       if (telegramCaption.length > 4096) {
         errors.push(
@@ -286,7 +304,7 @@ export function PostManager({
 
       if (selectedMedia.length > 10) {
         errors.push(
-          `Telegram accepts at most 10 media items in one v25.1 publishing job.`,
+          `Telegram accepts at most 10 media items in one v25.2 publishing job.`,
         );
       }
 
@@ -298,11 +316,11 @@ export function PostManager({
     }
 
     if (selectedPlatforms.includes("twitter")) {
-      const xCaption = captionOverrides.twitter?.trim() || masterCaption.trim();
+      const xCaption = finalCaption("twitter");
       const xLimit = 280;
       if (xCaption.length > xLimit) {
         errors.push(
-          `X caption is ${xCaption.length} characters. v25.1 defaults to ${xLimit}; set X_MAX_POST_CHARS in Vercel only if the connected posting account supports a higher API limit.`,
+          `X caption is ${xCaption.length} characters. v25.2 defaults to ${xLimit}; set X_MAX_POST_CHARS in Vercel only if the connected posting account supports a higher API limit.`,
         );
       }
       const xVideos = selectedMedia.filter((item) => item.kind === "video");
@@ -315,6 +333,44 @@ export function PostManager({
       }
       if (xStillImages.length > 4) errors.push("X accepts at most four photos per Post.");
     }
+    if (selectedPlatforms.includes("instagram")) {
+      const instagramCaption = finalCaption("instagram");
+
+      if (!selectedMedia.length) {
+        errors.push("Instagram requires at least one photo or video.");
+      }
+
+      if (selectedMedia.length > 10) {
+        errors.push("Instagram carousels support at most 10 media items.");
+      }
+
+      if (instagramCaption.length > 2200) {
+        errors.push(
+          `Instagram caption is ${instagramCaption.length} characters; maximum is 2200.`,
+        );
+      }
+
+      const unsupportedImages = selectedMedia.filter((item) => {
+        if (item.kind !== "image") return false;
+        const mime = item.mime_type?.toLowerCase();
+        if (mime) return mime !== "image/jpeg" && mime !== "image/jpg";
+        return !/\.(jpe?g)(?:\?|#|$)/i.test(item.url);
+      });
+
+      if (unsupportedImages.length) {
+        errors.push(
+          `Instagram API feed publishing requires JPEG images. Convert: ${unsupportedImages
+            .map((item) => item.title)
+            .join(", ")}.`,
+        );
+      }
+
+      if (selectedMedia.length === 1 && selectedMedia[0]?.kind === "video") {
+        warnings.push(
+          "Instagram will publish the single video as a Reel and share it to the feed.",
+        );
+      }
+    }
 
     return { errors, warnings };
   }, [
@@ -322,8 +378,11 @@ export function PostManager({
     selectedPlatforms,
     captionOverrides.telegram,
     captionOverrides.twitter,
+    captionOverrides.instagram,
     masterCaption,
     selectedMedia,
+    includeDeploymentLink,
+    selectedEvent,
   ]);
 
   const grouped = useMemo(() => {
@@ -353,6 +412,7 @@ export function PostManager({
 
   function resetComposer() {
     setEditingId(null);
+    setIncludeDeploymentLink(false);
     setTitle("");
     setMasterCaption("");
     setPostStatus("draft");
@@ -365,6 +425,7 @@ export function PostManager({
   function editPost(post: PostRow) {
     setEditingId(post.id);
     setEventId(post.event_id ?? "");
+    setIncludeDeploymentLink(Boolean(post.include_deployment_link));
     setTitle(post.title);
     setMasterCaption(post.master_caption);
     setPostStatus(
@@ -448,6 +509,7 @@ export function PostManager({
       title,
       masterCaption,
       eventId: eventId || null,
+      includeDeploymentLink,
       scheduledAt: scheduleIso,
       status: postStatus,
       platforms: selectedPlatforms.map((platform) => ({
@@ -570,10 +632,10 @@ export function PostManager({
               {editingId ? "Edit Publishing Plan" : "Compose Publishing Plan"}
             </h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Draft here, approve deliberately, schedule intentionally. In v25.1
-              Telegram and X are live. Scheduled live-provider jobs can leave Dusk
-              Industries when the Make dispatcher runs; Instagram and Snapchat
-              remain staged.
+              Draft here, approve deliberately, schedule intentionally. In v25.2
+              Telegram, X, and Instagram are live. Scheduled live-provider jobs
+              can leave Dusk Industries when the Make dispatcher runs; Snapchat
+              remains staged.
             </p>
           </div>
 
@@ -604,25 +666,60 @@ export function PostManager({
               />
             </label>
 
-            <label className="form-label">
-              Related deployment
-              <select
-                className="form-input"
-                value={eventId}
-                onChange={(event) => {
-                  setEventId(event.target.value);
-                  setMediaIds([]);
-                }}
+            <div>
+              <label className="form-label">
+                Related deployment
+                <select
+                  className="form-input"
+                  value={eventId}
+                  onChange={(event) => {
+                    const nextEventId = event.target.value;
+                    setEventId(nextEventId);
+                    setMediaIds([]);
+                    if (!nextEventId) setIncludeDeploymentLink(false);
+                  }}
+                >
+                  <option value="">No event</option>
+                  {events.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {new Date(event.start_at).toLocaleDateString()} ·{" "}
+                      {event.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label
+                className={`mt-3 flex items-start gap-3 rounded-xl border p-3 ${
+                  eventId
+                    ? "cursor-pointer border-dusk-aqua/20 bg-dusk-aqua/5"
+                    : "cursor-not-allowed border-white/5 bg-white/[0.015] opacity-45"
+                }`}
               >
-                <option value="">No event</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {new Date(event.start_at).toLocaleDateString()} ·{" "}
-                    {event.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={includeDeploymentLink}
+                  disabled={!eventId}
+                  onChange={(event) =>
+                    setIncludeDeploymentLink(event.target.checked)
+                  }
+                />
+                <span>
+                  <strong className="block text-sm">
+                    Add{" "}
+                    {selectedEvent
+                      ? deploymentDocumentLabel(selectedEvent)
+                      : "deployment document"}{" "}
+                    link to the post
+                  </strong>
+                  <span className="mt-1 block text-xs text-slate-500">
+                    Dusk appends the canonical `/chaos/...` URL to every
+                    selected platform caption at publish time.
+                  </span>
+                </span>
+              </label>
+            </div>
 
             <label className="form-label">
               Master caption
@@ -835,9 +932,9 @@ export function PostManager({
 
             <div className="rounded-2xl border border-dusk-gold/20 bg-dusk-gold/5 p-4 text-sm text-slate-300">
               <strong>Safety rail:</strong> Draft and Approved records never
-              publish. In v25.1, Telegram and X destinations can become Scheduled
-              and dispatchable. Instagram and Snapchat variants remain preserved
-              as Approved until their providers go live.
+              publish. In v25.2, Telegram, X, and Instagram destinations can
+              become Scheduled and dispatchable. Snapchat variants remain
+              preserved as Approved until its provider goes live.
             </div>
 
             <button
@@ -866,9 +963,7 @@ export function PostManager({
                 <PreviewCard
                   key={platform}
                   platform={platform}
-                  caption={
-                    captionOverrides[platform]?.trim() || masterCaption
-                  }
+                  caption={finalCaption(platform)}
                   media={selectedMedia}
                 />
               ))}

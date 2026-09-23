@@ -4,6 +4,7 @@ import { getDashboardUser } from "@/lib/auth";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { notifyAdmins } from "@/lib/notifications";
 import { platformIsConfigured, platformIsLive } from "@/lib/social/providers";
+import { deploymentLinkSuffix } from "@/lib/social/deployment-link";
 
 const PlatformSchema = z.enum([
   "telegram",
@@ -21,6 +22,7 @@ const CreateSchema = z.object({
   title: z.string().min(1).max(180),
   masterCaption: z.string().min(1).max(10000),
   eventId: z.string().uuid().nullable().optional(),
+  includeDeploymentLink: z.boolean().default(false),
   scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
   status: z.enum(["draft", "approved", "scheduled"]).default("draft"),
   platforms: z.array(PlatformInputSchema).min(1),
@@ -34,6 +36,7 @@ const PatchSchema = z.discriminatedUnion("action", [
     title: z.string().min(1).max(180),
     masterCaption: z.string().min(1).max(10000),
     eventId: z.string().uuid().nullable().optional(),
+    includeDeploymentLink: z.boolean().default(false),
     scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
     status: z.enum(["draft", "approved", "scheduled"]),
     platforms: z.array(PlatformInputSchema).min(1),
@@ -58,11 +61,30 @@ async function authorized() {
   return await getDashboardUser();
 }
 
-function validateScheduledPayload(input: {
-  masterCaption: string;
-  platforms: z.infer<typeof PlatformInputSchema>[];
-  mediaIds: string[];
-}) {
+async function deploymentSuffixForInput(
+  eventId: string | null | undefined,
+  includeDeploymentLink: boolean,
+) {
+  if (!includeDeploymentLink || !eventId) return "";
+
+  const supabase = createAdminSupabaseClient();
+  const { data } = await supabase
+    .from("events")
+    .select("slug,start_at")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  return data ? deploymentLinkSuffix(data) : "";
+}
+
+function validateScheduledPayload(
+  input: {
+    masterCaption: string;
+    platforms: z.infer<typeof PlatformInputSchema>[];
+    mediaIds: string[];
+  },
+  captionSuffix = "",
+) {
   const errors: string[] = [];
   const livePlatforms = input.platforms.filter((platform) =>
     platformIsLive(platform.platform),
@@ -83,7 +105,7 @@ function validateScheduledPayload(input: {
 
     if (platform.platform === "telegram") {
       const caption =
-        platform.captionOverride?.trim() || input.masterCaption.trim();
+        `${platform.captionOverride?.trim() || input.masterCaption.trim()}${captionSuffix}`;
 
       if (caption.length > 4096) {
         errors.push(
@@ -93,14 +115,14 @@ function validateScheduledPayload(input: {
 
       if (input.mediaIds.length > 10) {
         errors.push(
-          "Telegram supports at most 10 media items in a v25.1 publishing job.",
+          "Telegram supports at most 10 media items in a v25.2 publishing job.",
         );
       }
     }
 
     if (platform.platform === "twitter") {
       const caption =
-        platform.captionOverride?.trim() || input.masterCaption.trim();
+        `${platform.captionOverride?.trim() || input.masterCaption.trim()}${captionSuffix}`;
       const xLimit = Number(process.env.X_MAX_POST_CHARS || 280);
 
       if (caption.length > xLimit) {
@@ -112,6 +134,25 @@ function validateScheduledPayload(input: {
       if (input.mediaIds.length > 4) {
         errors.push(
           "X supports at most four attached photos; video/GIF posts must use a single media item.",
+        );
+      }
+    }
+
+    if (platform.platform === "instagram") {
+      const caption =
+        `${platform.captionOverride?.trim() || input.masterCaption.trim()}${captionSuffix}`;
+
+      if (!input.mediaIds.length) {
+        errors.push("Instagram requires at least one photo or video.");
+      }
+
+      if (input.mediaIds.length > 10) {
+        errors.push("Instagram carousels support at most 10 media items.");
+      }
+
+      if (caption.length > 2200) {
+        errors.push(
+          `Instagram caption is ${caption.length} characters; maximum is 2200.`,
         );
       }
     }
@@ -128,6 +169,8 @@ async function validateExistingPostForScheduling(postId: string) {
     .select(`
       id,
       master_caption,
+      include_deployment_link,
+      events(slug,start_at),
       post_media(id),
       post_platforms(platform, platform_caption_override, status)
     `)
@@ -138,16 +181,21 @@ async function validateExistingPostForScheduling(postId: string) {
     return [error?.message ?? "Social post not found."];
   }
 
-  return validateScheduledPayload({
-    masterCaption: post.master_caption ?? "",
-    mediaIds: (post.post_media ?? []).map((row: any) => row.id),
-    platforms: (post.post_platforms ?? [])
-      .filter((row: any) => row.status !== "published")
-      .map((row: any) => ({
-        platform: row.platform,
-        captionOverride: row.platform_caption_override,
-      })),
-  });
+  return validateScheduledPayload(
+    {
+      masterCaption: post.master_caption ?? "",
+      mediaIds: (post.post_media ?? []).map((row: any) => row.id),
+      platforms: (post.post_platforms ?? [])
+        .filter((row: any) => row.status !== "published")
+        .map((row: any) => ({
+          platform: row.platform,
+          captionOverride: row.platform_caption_override,
+        })),
+    },
+    post.include_deployment_link && post.events
+      ? deploymentLinkSuffix(post.events as any)
+      : "",
+  );
 }
 
 async function replacePostMedia(postId: string, mediaIds: string[]) {
@@ -286,7 +334,14 @@ export async function POST(request: Request) {
   const input = parsed.data;
 
   if (input.status === "scheduled") {
-    const scheduleErrors = validateScheduledPayload(input);
+    const captionSuffix = await deploymentSuffixForInput(
+      input.eventId,
+      input.includeDeploymentLink,
+    );
+    const scheduleErrors = validateScheduledPayload(
+      input,
+      captionSuffix,
+    );
 
     if (scheduleErrors.length) {
       return NextResponse.json(
@@ -312,6 +367,7 @@ export async function POST(request: Request) {
     .from("posts")
     .insert({
       event_id: input.eventId ?? null,
+      include_deployment_link: input.includeDeploymentLink,
       title: input.title,
       master_caption: input.masterCaption,
       status: input.status,
@@ -574,7 +630,14 @@ export async function PATCH(request: Request) {
   }
 
   if (input.status === "scheduled") {
-    const scheduleErrors = validateScheduledPayload(input);
+    const captionSuffix = await deploymentSuffixForInput(
+      input.eventId,
+      input.includeDeploymentLink,
+    );
+    const scheduleErrors = validateScheduledPayload(
+      input,
+      captionSuffix,
+    );
 
     if (scheduleErrors.length) {
       return NextResponse.json(
@@ -601,6 +664,7 @@ export async function PATCH(request: Request) {
     .from("posts")
     .update({
       event_id: input.eventId ?? null,
+      include_deployment_link: input.includeDeploymentLink,
       title: input.title,
       master_caption: input.masterCaption,
       status: input.status,

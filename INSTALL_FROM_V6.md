@@ -1,6 +1,6 @@
-# Upgrade old Dusk Industries v6 → current v25.0
+# Upgrade old Dusk Industries v6 → current v25.2
 
-The v25.0 package is cumulative. Do not install every historical release one by
+The v25.2 package is cumulative. Do not install every historical release one by
 one.
 
 ## Fresh / empty Supabase project
@@ -19,7 +19,8 @@ The cumulative `schema.sql` already includes:
 - Media / Case Studies
 - Social Ops
 - Notification Ops
-- v25.0 provider receipt fields
+- live Telegram/X/Instagram provider infrastructure
+- deployment-document link support
 
 Do not run historical migrations after a fresh current schema install.
 
@@ -30,7 +31,7 @@ Use the upgrade guide closest to your current version.
 Current path:
 
 ```text
-UPGRADE_FROM_V24_4_2.md
+UPGRADE_FROM_V25_1.md
 ```
 
 ## Core Vercel environment
@@ -62,7 +63,7 @@ VAPID_PRIVATE_KEY
 VAPID_SUBJECT
 ```
 
-## v25.0 Telegram provider
+## Live Telegram provider
 
 ```text
 TELEGRAM_BOT_TOKEN
@@ -75,6 +76,27 @@ Optional:
 TELEGRAM_PUBLIC_CHAT_USERNAME
 TELEGRAM_MESSAGE_THREAD_ID
 ```
+
+
+## Live X provider
+
+```text
+X_CLIENT_ID
+X_CLIENT_SECRET
+SOCIAL_TOKEN_ENCRYPTION_KEY
+X_MAX_POST_CHARS=280
+X_MAX_MEDIA_MB=50
+```
+
+## Live Instagram provider
+
+```text
+INSTAGRAM_APP_ID
+INSTAGRAM_APP_SECRET
+INSTAGRAM_GRAPH_VERSION=v25.0
+```
+
+Instagram reuses `SOCIAL_TOKEN_ENCRYPTION_KEY`.
 
 ## Auth templates
 
@@ -103,7 +125,7 @@ POST /api/integrations/make/social-dispatch
 Authorization: Bearer <MAKE_WEBHOOK_SECRET>
 ```
 
-Recommended cadence: every 1–5 minutes.
+Recommended cadence: every 1–5 minutes. It now handles Telegram, X, and Instagram.
 
 Full Telegram steps:
 

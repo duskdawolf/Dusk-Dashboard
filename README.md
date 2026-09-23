@@ -1,3 +1,80 @@
+# Dusk Industries™ v25.2 — Live Instagram Publishing + Deployment Links
+
+v25.2 makes Instagram the third live Social Ops provider and adds optional
+canonical Incident Report / Tactical Deployment Plan links to Social Ops posts.
+
+## Provider state
+
+```text
+Telegram   LIVE
+X          LIVE
+Instagram  LIVE
+Snapchat   v25.3 assisted handoff
+```
+
+## Instagram
+
+Dusk uses Instagram API with Instagram Login for professional Business/Creator
+accounts.
+
+Scopes:
+
+```text
+instagram_business_basic
+instagram_business_content_publish
+```
+
+Publishing supports:
+- one JPEG feed photo
+- one Reel
+- 2–10 item photo/video carousel
+- 2,200-character captions
+- long-lived token exchange + automatic refresh
+- provider permalinks and receipt snapshots
+- resumable container-processing state across dispatcher runs
+
+## Deployment links
+
+Social Ops now has a checkbox directly under **Related deployment**.
+
+For future events it appends:
+
+```text
+Tactical Deployment Plan: https://duskdawolf.com/chaos/<slug>
+```
+
+For completed events it appends:
+
+```text
+Incident Report: https://duskdawolf.com/chaos/<slug>
+```
+
+The master caption stays clean; Dusk composes the deployment link into each
+platform's final caption at preview/publish time.
+
+## Make
+
+The existing Social Dispatcher now publishes Telegram, X, and Instagram. No new
+Make scenario is required.
+
+## SQL
+
+Run:
+
+```text
+supabase/migrations/20260923_v25_2_instagram_social.sql
+```
+
+## Setup
+
+```text
+UPGRADE_FROM_V25_1.md
+INSTAGRAM_SOCIAL_SETUP.md
+make/SOCIAL_OPS.md
+```
+
+---
+
 # Dusk Industries™ v25.1 — Live X Publishing
 
 v25.1 adds X as the second live Social Ops provider.

@@ -28,7 +28,9 @@ export function SocialProviderPanel() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [status, setStatus] = useState("Checking provider connections...");
   const [testing, setTesting] = useState(false);
-  const [disconnectingX, setDisconnectingX] = useState(false);
+  const [disconnecting, setDisconnecting] = useState<
+    "twitter" | "instagram" | null
+  >(null);
 
   async function load() {
     const response = await fetch("/api/admin/social/providers", {
@@ -47,10 +49,20 @@ export function SocialProviderPanel() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+
     const xError = params.get("xError");
     const xConnected = params.get("xConnected");
+    const instagramError = params.get("instagramError");
+    const instagramConnected = params.get("instagramConnected");
+
     if (xError) setStatus(`X connection failed: ${xError}`);
-    if (xConnected) setStatus("X account connected successfully.");
+    else if (xConnected) setStatus("X account connected successfully.");
+    else if (instagramError) {
+      setStatus(`Instagram connection failed: ${instagramError}`);
+    } else if (instagramConnected) {
+      setStatus("Instagram account connected successfully.");
+    }
+
     load();
   }, []);
 
@@ -73,24 +85,50 @@ export function SocialProviderPanel() {
     }
 
     setStatus(
-      `Telegram test message sent${body.messageId ? ` · message ${body.messageId}` : ""}.`,
+      `Telegram test message sent${
+        body.messageId ? ` · message ${body.messageId}` : ""
+      }.`,
     );
     await load();
   }
 
-  function connectX() {
-    window.location.href = "/api/admin/social/x/connect";
+  function connect(platform: "twitter" | "instagram") {
+    window.location.href =
+      platform === "twitter"
+        ? "/api/admin/social/x/connect"
+        : "/api/admin/social/instagram/connect";
   }
 
-  async function disconnectX() {
-    if (!window.confirm("Disconnect X from Dusk Social Ops? Scheduled X jobs will fail until you reconnect.")) return;
-    setDisconnectingX(true);
-    setStatus("Disconnecting X...");
-    const response = await fetch("/api/admin/social/x/connection", { method: "DELETE" });
+  async function disconnect(platform: "twitter" | "instagram") {
+    const label = platform === "twitter" ? "X" : "Instagram";
+
+    if (
+      !window.confirm(
+        `Disconnect ${label} from Dusk Social Ops? Scheduled ${label} jobs will fail until you reconnect.`,
+      )
+    ) {
+      return;
+    }
+
+    setDisconnecting(platform);
+    setStatus(`Disconnecting ${label}...`);
+
+    const endpoint =
+      platform === "twitter"
+        ? "/api/admin/social/x/connection"
+        : "/api/admin/social/instagram/connection";
+
+    const response = await fetch(endpoint, { method: "DELETE" });
     const body = await response.json();
-    setDisconnectingX(false);
-    if (!response.ok) { setStatus(body.error ?? "Could not disconnect X."); return; }
-    setStatus("X disconnected.");
+
+    setDisconnecting(null);
+
+    if (!response.ok) {
+      setStatus(body.error ?? `Could not disconnect ${label}.`);
+      return;
+    }
+
+    setStatus(`${label} disconnected.`);
     await load();
   }
 
@@ -98,11 +136,12 @@ export function SocialProviderPanel() {
     <section className="panel">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="eyebrow">Live provider layer · v25.1</div>
+          <div className="eyebrow">Live provider layer · v25.2</div>
           <h2 className="text-3xl font-black">Publishing Providers</h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Telegram and X are live. X uses OAuth 2.0 PKCE with encrypted
-            refresh-token storage. Instagram remains staged for v25.2.
+            Telegram, X, and Instagram are live. Instagram uses the current
+            Instagram Login flow for Business/Creator accounts, with encrypted
+            long-lived token storage and automatic refresh.
           </p>
         </div>
 
@@ -192,24 +231,32 @@ export function SocialProviderPanel() {
               </button>
             ) : null}
 
-            {provider.platform === "twitter" && provider.configured ? (
+            {(provider.platform === "twitter" ||
+              provider.platform === "instagram") &&
+            provider.configured ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
-                  className={provider.connected ? "button-secondary" : "button-primary"}
+                  className={
+                    provider.connected ? "button-secondary" : "button-primary"
+                  }
                   type="button"
-                  onClick={connectX}
+                  onClick={() => connect(provider.platform)}
                 >
-                  {provider.connected ? "Reconnect X" : "Connect X"}
+                  {provider.connected
+                    ? `Reconnect ${provider.label}`
+                    : `Connect ${provider.label}`}
                 </button>
 
                 {provider.connected ? (
                   <button
                     className="rounded-xl border border-dusk-pink/30 bg-dusk-pink/10 px-3 py-2 text-xs font-black"
                     type="button"
-                    disabled={disconnectingX}
-                    onClick={disconnectX}
+                    disabled={disconnecting === provider.platform}
+                    onClick={() => disconnect(provider.platform)}
                   >
-                    {disconnectingX ? "Disconnecting..." : "Disconnect"}
+                    {disconnecting === provider.platform
+                      ? "Disconnecting..."
+                      : "Disconnect"}
                   </button>
                 ) : null}
               </div>

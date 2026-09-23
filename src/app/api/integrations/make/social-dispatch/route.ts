@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { notifyAdmins } from "@/lib/notifications";
 import { loadSocialPublishJob } from "@/lib/social/jobs";
-import { publishSocialJob } from "@/lib/social/providers";
+import { platformDisplayName, publishSocialJob } from "@/lib/social/providers";
 import { reconcileSocialPost } from "@/lib/social/reconcile";
+
+export const maxDuration = 60;
 
 function authorized(request: Request) {
   const expected = process.env.MAKE_WEBHOOK_SECRET;
@@ -37,7 +39,7 @@ export async function POST(request: Request) {
   const { data: due, error } = await supabase
     .from("post_platforms")
     .select("id,post_id,platform,attempt_count,scheduled_at")
-    .in("platform", ["telegram", "twitter"])
+    .in("platform", ["telegram", "twitter", "instagram"])
     .eq("status", "scheduled")
     .lte("scheduled_at", now)
     .order("scheduled_at", { ascending: true })
@@ -83,8 +85,8 @@ export async function POST(request: Request) {
     if (job) {
       await notifyAdmins({
         topicKey: "social.publishing",
-        title: `${job.title} is publishing to ${job.platform === "twitter" ? "X" : "Telegram"}`,
-        message: `The live ${job.platform === "twitter" ? "X" : "Telegram"} provider claimed this scheduled job.`,
+        title: `${job.title} is publishing to ${platformDisplayName(job.platform)}`,
+        message: `The live ${platformDisplayName(job.platform)} provider claimed this scheduled job.`,
         targetUrl: "/dashboard/posts",
         actionLabel: "Open Social Ops",
         postId: row.post_id,
@@ -141,10 +143,10 @@ export async function POST(request: Request) {
 
       await notifyAdmins({
         topicKey: "social.published",
-        title: `${job.title} published to ${job.platform === "twitter" ? "X" : "Telegram"}`,
+        title: `${job.title} published to ${platformDisplayName(job.platform)}`,
         message: result.postUrl
-          ? `${job.platform === "twitter" ? "X" : "Telegram"} accepted the post successfully. Tap to inspect Social Ops or open the live post.`
-          : `${job.platform === "twitter" ? "X" : "Telegram"} accepted the post successfully.`,
+          ? `${platformDisplayName(job.platform)} accepted the post successfully. Tap to inspect Social Ops or open the live post.`
+          : `${platformDisplayName(job.platform)} accepted the post successfully.`,
         targetUrl: "/dashboard/posts",
         actionLabel: "Open Social Ops",
         postId: row.post_id,
@@ -168,8 +170,9 @@ export async function POST(request: Request) {
       continue;
     }
 
+    const maxAttempts = job.platform === "instagram" ? 6 : 3;
     const shouldRetry =
-      result.retryable && nextAttemptCount < 3;
+      result.retryable && nextAttemptCount < maxAttempts;
 
     if (shouldRetry) {
       const delaySeconds = retryDelaySeconds(
@@ -185,7 +188,7 @@ export async function POST(request: Request) {
         .update({
           status: "scheduled",
           scheduled_at: nextAttemptAt,
-          last_error: result.error ?? `${job.platform === "twitter" ? "X" : "Telegram"} publishing failed.`,
+          last_error: result.error ?? `${platformDisplayName(job.platform)} publishing failed.`,
           attempt_count: nextAttemptCount,
           provider_response: result.providerResponse ?? {},
           last_provider_check: new Date().toISOString(),
@@ -208,7 +211,7 @@ export async function POST(request: Request) {
       .from("post_platforms")
       .update({
         status: "failed",
-        last_error: result.error ?? `${job.platform === "twitter" ? "X" : "Telegram"} publishing failed.`,
+        last_error: result.error ?? `${platformDisplayName(job.platform)} publishing failed.`,
         attempt_count: nextAttemptCount,
         provider_response: result.providerResponse ?? {},
         last_provider_check: new Date().toISOString(),
@@ -219,10 +222,10 @@ export async function POST(request: Request) {
 
     await notifyAdmins({
       topicKey: "social.publish_failed",
-      title: `${job.title} failed to publish to ${job.platform === "twitter" ? "X" : "Telegram"}`,
+      title: `${job.title} failed to publish to ${platformDisplayName(job.platform)}`,
       message:
         result.error ??
-        `${job.platform === "twitter" ? "X" : "Telegram"} returned an unknown publishing failure.`,
+        `${platformDisplayName(job.platform)} returned an unknown publishing failure.`,
       targetUrl: "/dashboard/posts",
       actionLabel: "Inspect failure",
       postId: row.post_id,

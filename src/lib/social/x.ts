@@ -218,7 +218,7 @@ export async function getXProviderStatus(userId?: string): Promise<SocialProvide
     configured: xOAuthConfigured(),
     live: true,
     connected: false,
-    detail: "v25.1 live provider using X API v2 OAuth 2.0 PKCE.",
+    detail: "Live X provider using X API v2 OAuth 2.0 PKCE.",
     capabilities: { text: true, photo: true, video: true, carousel: true, maxMedia: 4, maxText: cfg.maxText || DEFAULT_MAX_TEXT, maxCaption: cfg.maxText || DEFAULT_MAX_TEXT, analytics: false },
   };
   if (!base.configured) return { ...base, detail: "Set X_CLIENT_ID, X_CLIENT_SECRET, and SOCIAL_TOKEN_ENCRYPTION_KEY in Vercel." };
@@ -233,7 +233,7 @@ export async function getXProviderStatus(userId?: string): Promise<SocialProvide
   const accessToken = decryptSocialSecret(fresh.access_token_ciphertext);
   const me = await xRequest<XMeResponse>(accessToken, "/2/users/me?user.fields=id,name,username");
   if (!me.ok || !me.body.data) return { ...base, account: fresh.username ? `@${fresh.username}` : fresh.display_name, error: me.error, detail: "X credentials exist but the account check failed." };
-  return { ...base, connected: true, account: `@${me.body.data.username}`, target: me.body.data.name, detail: "X account connected. Scheduled X posts are live in v25.1." };
+  return { ...base, connected: true, account: `@${me.body.data.username}`, target: me.body.data.name, detail: "X account connected. Scheduled X posts are live." };
 }
 
 export function validateXJob(job: SocialPublishJob) {

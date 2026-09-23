@@ -1,6 +1,6 @@
-# Upgrade Dusk Industries v22 → v25.0
+# Upgrade Dusk Industries v22 → v25.2
 
-The v25.0 package is cumulative at the code level, but an existing v22 Supabase
+The v25.2 package is cumulative at the code level, but an existing v22 Supabase
 database needs the later migrations.
 
 ## 1 — Update code
@@ -15,6 +15,8 @@ Push `main` after the database/environment work below is ready.
 1. supabase/migrations/20260922_v24_2_social_ops.sql
 2. supabase/migrations/20260922_v24_3_notification_ops.sql
 3. supabase/migrations/20260922_v25_0_live_social.sql
+4. supabase/migrations/20260922_v25_1_x_social.sql
+5. supabase/migrations/20260923_v25_2_instagram_social.sql
 ```
 
 The v24.4 / v24.4.1 / v24.4.2 releases did not require SQL migrations.
@@ -65,4 +67,30 @@ Check:
 /dashboard/account
 ```
 
-The global footer should show `v25.0`.
+The global footer should show `v25.2`.
+
+
+## v25.1 / v25.2 live providers
+
+X:
+
+```text
+X_CLIENT_ID
+X_CLIENT_SECRET
+SOCIAL_TOKEN_ENCRYPTION_KEY
+```
+
+Instagram:
+
+```text
+INSTAGRAM_APP_ID
+INSTAGRAM_APP_SECRET
+INSTAGRAM_GRAPH_VERSION=v25.0
+```
+
+Then follow:
+
+```text
+X_SOCIAL_SETUP.md
+INSTAGRAM_SOCIAL_SETUP.md
+```
