@@ -5,11 +5,13 @@ import { createAdminSupabaseClient } from "@/lib/supabase/server";
 import { notifyAdmins } from "@/lib/notifications";
 import { platformIsConfigured, platformIsLive } from "@/lib/social/providers";
 import { deploymentLinkSuffix } from "@/lib/social/deployment-link";
+import { blueskyGraphemeLength } from "@/lib/social/bluesky";
 
 const PlatformSchema = z.enum([
   "telegram",
   "twitter",
   "instagram",
+  "bluesky",
   "snapchat",
 ]);
 
@@ -156,9 +158,52 @@ function validateScheduledPayload(
         );
       }
     }
+
+    if (platform.platform === "bluesky") {
+      const caption =
+        `${platform.captionOverride?.trim() || input.masterCaption.trim()}${captionSuffix}`;
+      const length = blueskyGraphemeLength(caption);
+
+      if (length > 300) {
+        errors.push(
+          `Bluesky text is ${length} graphemes; maximum is 300.`,
+        );
+      }
+
+      if (input.mediaIds.length > 4) {
+        errors.push(
+          "Bluesky supports at most four images in a v25.3 publishing job.",
+        );
+      }
+    }
   }
 
   return errors;
+}
+
+async function blueskyMediaErrors(
+  platforms: Array<{ platform: string }>,
+  mediaIds: string[],
+) {
+  if (!platforms.some((item) => item.platform === "bluesky")) {
+    return [];
+  }
+
+  if (!mediaIds.length) return [];
+
+  const supabase = createAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("media")
+    .select("id,kind")
+    .in("id", mediaIds);
+
+  if (error) return [error.message];
+
+  return (data ?? []).some((item) => item.kind === "video")
+    ? [
+        "Bluesky video publishing is not enabled in v25.3. Remove video from the Bluesky publishing plan or leave Bluesky staged.",
+      ]
+    : [];
 }
 
 async function validateExistingPostForScheduling(postId: string) {
@@ -181,21 +226,27 @@ async function validateExistingPostForScheduling(postId: string) {
     return [error?.message ?? "Social post not found."];
   }
 
-  return validateScheduledPayload(
+  const platforms = (post.post_platforms ?? [])
+    .filter((row: any) => row.status !== "published")
+    .map((row: any) => ({
+      platform: row.platform,
+      captionOverride: row.platform_caption_override,
+    }));
+  const mediaIds = (post.post_media ?? []).map((row: any) => row.id);
+
+  const errors = validateScheduledPayload(
     {
       masterCaption: post.master_caption ?? "",
-      mediaIds: (post.post_media ?? []).map((row: any) => row.id),
-      platforms: (post.post_platforms ?? [])
-        .filter((row: any) => row.status !== "published")
-        .map((row: any) => ({
-          platform: row.platform,
-          captionOverride: row.platform_caption_override,
-        })),
+      mediaIds,
+      platforms,
     },
     post.include_deployment_link && post.events
       ? deploymentLinkSuffix(post.events as any)
       : "",
   );
+
+  errors.push(...(await blueskyMediaErrors(platforms, mediaIds)));
+  return errors;
 }
 
 async function replacePostMedia(postId: string, mediaIds: string[]) {
@@ -341,6 +392,9 @@ export async function POST(request: Request) {
     const scheduleErrors = validateScheduledPayload(
       input,
       captionSuffix,
+    );
+    scheduleErrors.push(
+      ...(await blueskyMediaErrors(input.platforms, input.mediaIds)),
     );
 
     if (scheduleErrors.length) {
@@ -637,6 +691,9 @@ export async function PATCH(request: Request) {
     const scheduleErrors = validateScheduledPayload(
       input,
       captionSuffix,
+    );
+    scheduleErrors.push(
+      ...(await blueskyMediaErrors(input.platforms, input.mediaIds)),
     );
 
     if (scheduleErrors.length) {

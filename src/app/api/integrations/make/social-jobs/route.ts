@@ -86,7 +86,8 @@ export async function GET(request: Request) {
     query = query
       .neq("platform", "telegram")
       .neq("platform", "twitter")
-      .neq("platform", "instagram");
+      .neq("platform", "instagram")
+      .neq("platform", "bluesky");
   }
 
   const { data, error } = await query
@@ -127,7 +128,7 @@ export async function GET(request: Request) {
     jobs,
     note: includeLive
       ? "Live providers included explicitly."
-      : "Telegram, X, and Instagram are excluded because v25.2 dispatches all live providers through /api/integrations/make/social-dispatch.",
+      : "Telegram, X, Instagram, and Bluesky are excluded because v25.3 dispatches all live providers through /api/integrations/make/social-dispatch.",
   });
 }
 

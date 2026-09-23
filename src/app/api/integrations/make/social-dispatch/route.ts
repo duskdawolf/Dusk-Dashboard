@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const { data: due, error } = await supabase
     .from("post_platforms")
     .select("id,post_id,platform,attempt_count,scheduled_at")
-    .in("platform", ["telegram", "twitter", "instagram"])
+    .in("platform", ["telegram", "twitter", "instagram", "bluesky"])
     .eq("status", "scheduled")
     .lte("scheduled_at", now)
     .order("scheduled_at", { ascending: true })

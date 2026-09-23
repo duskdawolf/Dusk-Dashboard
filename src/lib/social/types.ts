@@ -2,6 +2,7 @@ export type SocialPlatform =
   | "telegram"
   | "twitter"
   | "instagram"
+  | "bluesky"
   | "snapchat";
 
 export type SocialMediaAsset = {

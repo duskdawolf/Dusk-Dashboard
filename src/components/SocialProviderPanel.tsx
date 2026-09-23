@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Provider = {
-  platform: "telegram" | "twitter" | "instagram" | "snapchat";
+  platform: "telegram" | "twitter" | "instagram" | "bluesky" | "snapchat";
   label: string;
   configured: boolean;
   live: boolean;
@@ -140,12 +140,12 @@ export function SocialProviderPanel() {
     <section className="panel">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="eyebrow">Live provider layer · v25.2</div>
+          <div className="eyebrow">Live provider layer · v25.3</div>
           <h2 className="text-3xl font-black">Publishing Providers</h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Telegram, X, and Instagram are live. Instagram uses the current
-            Instagram Login flow for Business/Creator accounts, with encrypted
-            long-lived token storage and automatic refresh.
+            Telegram, X, Instagram, and Bluesky are live. Bluesky uses an
+            app-password AT Protocol session so scheduled publishing stays
+            server-side without exposing your primary account password.
           </p>
         </div>
 
@@ -154,7 +154,7 @@ export function SocialProviderPanel() {
         </button>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {providers.map((provider) => (
           <div
             key={provider.platform}

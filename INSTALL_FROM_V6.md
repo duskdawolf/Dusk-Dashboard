@@ -1,6 +1,6 @@
-# Upgrade old Dusk Industries v6 → current v25.2
+# Upgrade old Dusk Industries v6 → current v25.3
 
-The v25.2 package is cumulative. Do not install every historical release one by
+The v25.3 package is cumulative. Do not install every historical release one by
 one.
 
 ## Fresh / empty Supabase project
@@ -97,6 +97,16 @@ INSTAGRAM_GRAPH_VERSION=v25.0
 ```
 
 Instagram reuses `SOCIAL_TOKEN_ENCRYPTION_KEY`.
+
+## Live Bluesky provider
+
+```text
+BLUESKY_IDENTIFIER
+BLUESKY_APP_PASSWORD
+BLUESKY_PDS_URL=https://bsky.social
+```
+
+Use a Bluesky app password, not the primary account password.
 
 ## Auth templates
 

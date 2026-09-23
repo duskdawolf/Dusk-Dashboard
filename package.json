@@ -1,6 +1,6 @@
 {
   "name": "dusk-industries",
-  "version": "25.2.1",
+  "version": "25.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

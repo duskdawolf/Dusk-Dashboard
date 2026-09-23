@@ -1,4 +1,4 @@
-# Dusk Industries v25.2 — Live Social Ops / Make Contract
+# Dusk Industries v25.3 — Live Social Ops / Make Contract
 
 ## Live provider state
 
@@ -6,7 +6,8 @@
 Telegram   LIVE
 X          LIVE
 Instagram  LIVE
-Snapchat   staged for v25.3
+Bluesky    LIVE
+Snapchat   postponed / staged
 ```
 
 ## One dispatcher for all live providers
@@ -33,59 +34,46 @@ Body:
 {}
 ```
 
-The dispatcher now claims due rows where platform is:
+The dispatcher now claims due rows for:
 
 ```text
 telegram
 twitter
 instagram
+bluesky
 ```
 
-Dusk, not Make, owns:
+Dusk owns:
 - provider validation
-- X OAuth/token refresh
-- Instagram OAuth/long-lived-token refresh
-- Telegram/X direct publishing
-- Instagram container creation/polling/publishing
+- Telegram publishing
+- X OAuth/token refresh + publishing
+- Instagram OAuth/container publishing
+- Bluesky AT Protocol session + blob publishing
 - provider receipt storage
 - retries
 - parent-post reconciliation
 - Notification Ops
 
-## Instagram container state
+## Bluesky
 
-Instagram can take several minutes to process a Reel or carousel.
+Make contains no Bluesky logic.
 
-If the container is not ready within the current dispatcher request, Dusk stores
-the Instagram container ID/state inside `post_platforms.provider_response`,
-reschedules the same platform job, and resumes the existing container later.
-
-The Make scenario does not need branches or delays for Instagram.
-
-## Duplicate-send protection
-
-Every due live-provider row is conditionally changed:
-
-```text
-scheduled → publishing
-```
-
-before an external provider request begins.
-
-An overlapping dispatcher run cannot claim that same row again after it leaves
-`scheduled`.
+Dusk logs into the configured Bluesky PDS using the server-side app password,
+uploads image blobs when needed, creates `app.bsky.feed.post` records, stores
+the AT URI/CID/live bsky.app URL, and reports success/failure through the same
+dispatcher response.
 
 ## Generic provider queue
 
-The older generic provider queue remains available for future adapters:
+The legacy generic endpoint remains:
 
 ```text
 GET  /api/integrations/make/social-jobs
 POST /api/integrations/make/social-jobs
 ```
 
-By default v25.2 excludes Telegram, X, and Instagram because the live dispatcher
-owns all three.
+By default v25.3 excludes Telegram, X, Instagram, and Bluesky because the live
+dispatcher owns them.
 
 For debugging only:
 
@@ -95,22 +83,13 @@ GET /api/integrations/make/social-jobs?includeLive=1
 
 Do not create parallel provider-publishing scenarios against that queue.
 
-## Failure / retry
-
-Telegram/X use the standard live-provider retry budget.
-
-Instagram gets an extended retry budget because `IN_PROGRESS` is a normal media
-container state rather than a publishing failure.
-
-Permanent auth, permission, media-format, or container errors move that
-destination to Failed and trigger Notification Ops.
-
 ## Analytics
 
-The existing ingestion endpoint remains:
+The existing metrics ingestion endpoint remains:
 
 ```text
 POST /api/integrations/make/social-metrics
 ```
 
-Shared provider-metric collection/normalization remains planned for v25.4.
+Shared provider-metric collection/normalization remains a later Social Ops
+analytics pass.

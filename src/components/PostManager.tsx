@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { deploymentDocumentLabel, deploymentDocumentUrl } from "@/lib/social/deployment-link";
 
-type PlatformName = "telegram" | "twitter" | "instagram" | "snapchat";
+type PlatformName = "telegram" | "twitter" | "instagram" | "bluesky" | "snapchat";
 type PostStatus = "draft" | "approved" | "scheduled" | "published" | "failed";
 
 type EventOption = {
@@ -91,12 +91,17 @@ const PLATFORM_META: Record<
   },
   instagram: {
     label: "Instagram",
-    note: "LIVE in v25.2 · photos, Reels, 2–10 item carousels",
+    note: "LIVE · photos, Reels, 2–10 item carousels",
+    live: true,
+  },
+  bluesky: {
+    label: "Bluesky",
+    note: "LIVE in v25.3 · text + up to 4 images",
     live: true,
   },
   snapchat: {
     label: "Snapchat",
-    note: "Draft/Approved only · assisted handoff planned for v25.3",
+    note: "Draft/Approved only · integration postponed",
     live: false,
   },
 };
@@ -267,6 +272,18 @@ export function PostManager({
     }${deploymentSuffix}`;
   }
 
+  function graphemeLength(value: string) {
+    const Segmenter = (Intl as any).Segmenter;
+
+    if (Segmenter) {
+      return Array.from(
+        new Segmenter(undefined, { granularity: "grapheme" }).segment(value),
+      ).length;
+    }
+
+    return Array.from(value).length;
+  }
+
   const scheduleIssues = useMemo(() => {
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -372,6 +389,27 @@ export function PostManager({
       }
     }
 
+    if (selectedPlatforms.includes("bluesky")) {
+      const blueskyCaption = finalCaption("bluesky");
+      const length = graphemeLength(blueskyCaption);
+
+      if (length > 300) {
+        errors.push(
+          `Bluesky text is ${length} graphemes; maximum is 300.`,
+        );
+      }
+
+      if (selectedMedia.length > 4) {
+        errors.push("Bluesky supports at most four images per post.");
+      }
+
+      if (selectedMedia.some((item) => item.kind === "video")) {
+        errors.push(
+          "Bluesky video publishing is not enabled in v25.3. Use text and up to four images.",
+        );
+      }
+    }
+
     return { errors, warnings };
   }, [
     postStatus,
@@ -379,6 +417,7 @@ export function PostManager({
     captionOverrides.telegram,
     captionOverrides.twitter,
     captionOverrides.instagram,
+    captionOverrides.bluesky,
     masterCaption,
     selectedMedia,
     includeDeploymentLink,
@@ -632,10 +671,10 @@ export function PostManager({
               {editingId ? "Edit Publishing Plan" : "Compose Publishing Plan"}
             </h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Draft here, approve deliberately, schedule intentionally. In v25.2
-              Telegram, X, and Instagram are live. Scheduled live-provider jobs
-              can leave Dusk Industries when the Make dispatcher runs; Snapchat
-              remains staged.
+              Draft here, approve deliberately, schedule intentionally. In v25.3
+              Telegram, X, Instagram, and Bluesky are live. Scheduled
+              live-provider jobs can leave Dusk Industries when the Make
+              dispatcher runs; Snapchat is postponed.
             </p>
           </div>
 
@@ -932,9 +971,8 @@ export function PostManager({
 
             <div className="rounded-2xl border border-dusk-gold/20 bg-dusk-gold/5 p-4 text-sm text-slate-300">
               <strong>Safety rail:</strong> Draft and Approved records never
-              publish. In v25.2, Telegram, X, and Instagram destinations can
-              become Scheduled and dispatchable. Snapchat variants remain
-              preserved as Approved until its provider goes live.
+              publish. In v25.3, Telegram, X, Instagram, and Bluesky can become
+              Scheduled and dispatchable. Snapchat remains staged/postponed.
             </div>
 
             <button

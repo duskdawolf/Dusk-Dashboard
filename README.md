@@ -1,3 +1,68 @@
+# Dusk Industries™ v25.3 — Live Bluesky Publishing
+
+v25.3 replaces the previously planned Snapchat release with Bluesky.
+
+## Provider state
+
+```text
+Telegram   LIVE
+X          LIVE
+Instagram  LIVE
+Bluesky    LIVE
+Snapchat   postponed / staged
+```
+
+## Bluesky
+
+The provider uses AT Protocol password-session publishing with a dedicated
+Bluesky app password stored only in Vercel.
+
+Supports:
+- text-only posts
+- up to 4 images
+- alt text
+- URL facets
+- Incident Report / Tactical Deployment Plan links
+- AT URI + CID receipts
+- live bsky.app Post URLs
+- standard Social Ops retry + Notification Ops flow
+
+v25.3 validates Bluesky's 300-grapheme post limit and the final caption after
+the optional deployment-document link is appended.
+
+Bluesky video is intentionally blocked in v25.3 rather than silently omitted.
+
+## Make
+
+The existing Social Dispatcher now handles:
+
+```text
+Telegram
+X
+Instagram
+Bluesky
+```
+
+No new Make scenario is required.
+
+## SQL
+
+Run:
+
+```text
+supabase/migrations/20260923_v25_3_bluesky_social.sql
+```
+
+## Setup
+
+```text
+UPGRADE_FROM_V25_2_1.md
+BLUESKY_SOCIAL_SETUP.md
+make/SOCIAL_OPS.md
+```
+
+---
+
 # Dusk Industries™ v25.2 — Live Instagram Publishing + Deployment Links
 
 v25.2 makes Instagram the third live Social Ops provider and adds optional

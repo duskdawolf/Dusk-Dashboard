@@ -302,7 +302,7 @@ create table if not exists public.post_platforms (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null references public.posts(id) on delete cascade,
   platform text not null
-    check (platform in ('telegram','twitter','instagram','snapchat')),
+    check (platform in ('telegram','twitter','instagram','bluesky','snapchat')),
   platform_post_id text,
   platform_caption_override text,
   status text not null default 'draft',
@@ -1007,3 +1007,15 @@ alter table public.posts
 create index if not exists social_provider_connections_instagram_idx
   on public.social_provider_connections(user_id, platform)
   where platform = 'instagram';
+
+
+-- v25.3 Bluesky provider -------------------------------------------
+-- Dusk Industries v25.3
+-- Live Bluesky publishing.
+
+alter table public.post_platforms
+  drop constraint if exists post_platforms_platform_check;
+
+alter table public.post_platforms
+  add constraint post_platforms_platform_check
+  check (platform in ('telegram','twitter','instagram','bluesky','snapchat'));
