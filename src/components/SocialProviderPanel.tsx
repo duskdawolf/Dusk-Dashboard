@@ -92,14 +92,18 @@ export function SocialProviderPanel() {
     await load();
   }
 
-  function connect(platform: "twitter" | "instagram") {
+  function connect(platform: Provider["platform"]) {
+    if (platform !== "twitter" && platform !== "instagram") return;
+
     window.location.href =
       platform === "twitter"
         ? "/api/admin/social/x/connect"
         : "/api/admin/social/instagram/connect";
   }
 
-  async function disconnect(platform: "twitter" | "instagram") {
+  async function disconnect(platform: Provider["platform"]) {
+    if (platform !== "twitter" && platform !== "instagram") return;
+
     const label = platform === "twitter" ? "X" : "Instagram";
 
     if (
