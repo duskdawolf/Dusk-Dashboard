@@ -27,7 +27,7 @@ async function telegramTestMessage() {
       body: JSON.stringify({
         chat_id: chatId,
         text:
-          "🐾 Dusk Industries Social Ops provider test\n\nTelegram v25.0 connection is operational.",
+          "🐾 Dusk Industries Social Ops provider test\n\nTelegram v25.1 connection is operational.",
         ...(process.env.TELEGRAM_MESSAGE_THREAD_ID
           ? {
               message_thread_id: Number(
@@ -58,16 +58,18 @@ async function telegramTestMessage() {
 }
 
 export async function GET() {
-  if (!(await getDashboardUser())) {
+  const user = await getDashboardUser();
+
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const providers = await getSocialProviderStatuses();
+  const providers = await getSocialProviderStatuses(user.id);
 
   return NextResponse.json({
     providers,
-    livePlatforms: ["telegram"],
-    version: "25.0",
+    livePlatforms: ["telegram", "twitter"],
+    version: "25.1",
   });
 }
 

@@ -37,7 +37,7 @@ export default async function DashboardPostsPage({
       .order("start_at", { ascending: false }),
     supabase
       .from("media")
-      .select("id,title,kind,url,event_id,published,sort_order")
+      .select("id,title,kind,url,mime_type,event_id,published,sort_order")
       .eq("published", true)
       .order("event_id", { ascending: true })
       .order("sort_order", { ascending: true }),

@@ -17,6 +17,7 @@ type MediaOption = {
   title: string;
   kind: "image" | "video";
   url: string;
+  mime_type?: string | null;
   event_id: string | null;
   published: boolean;
   sort_order: number;
@@ -78,13 +79,13 @@ const PLATFORM_META: Record<
 > = {
   telegram: {
     label: "Telegram",
-    note: "LIVE in v25.0 · text, photo, video, albums",
+    note: "LIVE in v25.1 · text, photo, video, albums",
     live: true,
   },
   twitter: {
     label: "X",
-    note: "Draft/Approved only · live provider planned for v25.1",
-    live: false,
+    note: "LIVE in v25.1 · OAuth 2.0 · text, up to 4 photos, 1 video/GIF",
+    live: true,
   },
   instagram: {
     label: "Instagram",
@@ -261,7 +262,7 @@ export function PostManager({
 
     if (!liveSelected.length) {
       errors.push(
-        "Choose at least one live provider before scheduling. Telegram is the live v25.0 provider.",
+        "Choose at least one live provider before scheduling. Telegram and X are live in v25.1.",
       );
     }
 
@@ -285,7 +286,7 @@ export function PostManager({
 
       if (selectedMedia.length > 10) {
         errors.push(
-          `Telegram accepts at most 10 media items in one v25.0 publishing job.`,
+          `Telegram accepts at most 10 media items in one v25.1 publishing job.`,
         );
       }
 
@@ -296,13 +297,33 @@ export function PostManager({
       }
     }
 
+    if (selectedPlatforms.includes("twitter")) {
+      const xCaption = captionOverrides.twitter?.trim() || masterCaption.trim();
+      const xLimit = 280;
+      if (xCaption.length > xLimit) {
+        errors.push(
+          `X caption is ${xCaption.length} characters. v25.1 defaults to ${xLimit}; set X_MAX_POST_CHARS in Vercel only if the connected posting account supports a higher API limit.`,
+        );
+      }
+      const xVideos = selectedMedia.filter((item) => item.kind === "video");
+      const xGifs = selectedMedia.filter((item) => item.mime_type?.toLowerCase() === "image/gif");
+      const xStillImages = selectedMedia.filter((item) => item.kind === "image" && !xGifs.includes(item));
+      if (xVideos.length > 1) errors.push("X accepts at most one video per Post.");
+      if (xGifs.length > 1) errors.push("X accepts at most one animated GIF per Post.");
+      if ((xVideos.length || xGifs.length) && selectedMedia.length > 1) {
+        errors.push("X cannot mix a video or animated GIF with other attached media in one Post.");
+      }
+      if (xStillImages.length > 4) errors.push("X accepts at most four photos per Post.");
+    }
+
     return { errors, warnings };
   }, [
     postStatus,
     selectedPlatforms,
     captionOverrides.telegram,
+    captionOverrides.twitter,
     masterCaption,
-    selectedMedia.length,
+    selectedMedia,
   ]);
 
   const grouped = useMemo(() => {
@@ -549,10 +570,10 @@ export function PostManager({
               {editingId ? "Edit Publishing Plan" : "Compose Publishing Plan"}
             </h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Draft here, approve deliberately, schedule intentionally. In v25.0
-              Telegram is live: a Scheduled Telegram job can leave Dusk Industries
-              when the Make dispatcher runs. X, Instagram, and Snapchat remain
-              Draft/Approved until their provider releases.
+              Draft here, approve deliberately, schedule intentionally. In v25.1
+              Telegram and X are live. Scheduled live-provider jobs can leave Dusk
+              Industries when the Make dispatcher runs; Instagram and Snapchat
+              remain staged.
             </p>
           </div>
 
@@ -814,9 +835,9 @@ export function PostManager({
 
             <div className="rounded-2xl border border-dusk-gold/20 bg-dusk-gold/5 p-4 text-sm text-slate-300">
               <strong>Safety rail:</strong> Draft and Approved records never
-              publish. In v25.0, only the Telegram destination becomes Scheduled
-              and dispatchable. X, Instagram, and Snapchat variants remain
-              preserved as Approved until their providers go live.
+              publish. In v25.1, Telegram and X destinations can become Scheduled
+              and dispatchable. Instagram and Snapchat variants remain preserved
+              as Approved until their providers go live.
             </div>
 
             <button

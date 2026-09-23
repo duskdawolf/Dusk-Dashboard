@@ -1,3 +1,37 @@
+# Dusk Industries™ v25.1 — Live X Publishing
+
+v25.1 adds X as the second live Social Ops provider.
+
+```text
+Telegram   LIVE
+X          LIVE
+Instagram  v25.2
+Snapchat   v25.3 assisted handoff
+```
+
+X uses OAuth 2.0 Authorization Code + PKCE, requests `offline.access`, encrypts
+access/refresh tokens with AES-256-GCM, refreshes expiring credentials, uploads
+media through X API v2, and stores the provider receipt/live Post URL in the
+existing Social Ops records.
+
+The existing Make dispatcher now handles Telegram + X; no second publishing
+scenario is required.
+
+Run:
+
+```text
+supabase/migrations/20260922_v25_1_x_social.sql
+```
+
+Then follow:
+
+```text
+UPGRADE_FROM_V25_0.md
+X_SOCIAL_SETUP.md
+```
+
+---
+
 # Dusk Industries™ v25.0 — Live Social Publishing Core + Telegram
 
 v25.0 crosses the boundary from Social Ops planning into real provider

@@ -28,6 +28,7 @@ export function SocialProviderPanel() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [status, setStatus] = useState("Checking provider connections...");
   const [testing, setTesting] = useState(false);
+  const [disconnectingX, setDisconnectingX] = useState(false);
 
   async function load() {
     const response = await fetch("/api/admin/social/providers", {
@@ -45,6 +46,11 @@ export function SocialProviderPanel() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const xError = params.get("xError");
+    const xConnected = params.get("xConnected");
+    if (xError) setStatus(`X connection failed: ${xError}`);
+    if (xConnected) setStatus("X account connected successfully.");
     load();
   }, []);
 
@@ -72,15 +78,31 @@ export function SocialProviderPanel() {
     await load();
   }
 
+  function connectX() {
+    window.location.href = "/api/admin/social/x/connect";
+  }
+
+  async function disconnectX() {
+    if (!window.confirm("Disconnect X from Dusk Social Ops? Scheduled X jobs will fail until you reconnect.")) return;
+    setDisconnectingX(true);
+    setStatus("Disconnecting X...");
+    const response = await fetch("/api/admin/social/x/connection", { method: "DELETE" });
+    const body = await response.json();
+    setDisconnectingX(false);
+    if (!response.ok) { setStatus(body.error ?? "Could not disconnect X."); return; }
+    setStatus("X disconnected.");
+    await load();
+  }
+
   return (
     <section className="panel">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="eyebrow">Live provider layer · v25.0</div>
+          <div className="eyebrow">Live provider layer · v25.1</div>
           <h2 className="text-3xl font-black">Publishing Providers</h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Telegram is the first live provider. X and Instagram remain safely
-            Draft/Approved until their v25.x provider releases.
+            Telegram and X are live. X uses OAuth 2.0 PKCE with encrypted
+            refresh-token storage. Instagram remains staged for v25.2.
           </p>
         </div>
 
@@ -168,6 +190,29 @@ export function SocialProviderPanel() {
               >
                 {testing ? "Sending..." : "Send provider test"}
               </button>
+            ) : null}
+
+            {provider.platform === "twitter" && provider.configured ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  className={provider.connected ? "button-secondary" : "button-primary"}
+                  type="button"
+                  onClick={connectX}
+                >
+                  {provider.connected ? "Reconnect X" : "Connect X"}
+                </button>
+
+                {provider.connected ? (
+                  <button
+                    className="rounded-xl border border-dusk-pink/30 bg-dusk-pink/10 px-3 py-2 text-xs font-black"
+                    type="button"
+                    disabled={disconnectingX}
+                    onClick={disconnectX}
+                  >
+                    {disconnectingX ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                ) : null}
+              </div>
             ) : null}
           </div>
         ))}

@@ -93,7 +93,25 @@ function validateScheduledPayload(input: {
 
       if (input.mediaIds.length > 10) {
         errors.push(
-          "Telegram supports at most 10 media items in a v25.0 publishing job.",
+          "Telegram supports at most 10 media items in a v25.1 publishing job.",
+        );
+      }
+    }
+
+    if (platform.platform === "twitter") {
+      const caption =
+        platform.captionOverride?.trim() || input.masterCaption.trim();
+      const xLimit = Number(process.env.X_MAX_POST_CHARS || 280);
+
+      if (caption.length > xLimit) {
+        errors.push(
+          `X text is ${caption.length} characters; Dusk's configured X limit is ${xLimit}.`,
+        );
+      }
+
+      if (input.mediaIds.length > 4) {
+        errors.push(
+          "X supports at most four attached photos; video/GIF posts must use a single media item.",
         );
       }
     }

@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const { data: due, error } = await supabase
     .from("post_platforms")
     .select("id,post_id,platform,attempt_count,scheduled_at")
-    .eq("platform", "telegram")
+    .in("platform", ["telegram", "twitter"])
     .eq("status", "scheduled")
     .lte("scheduled_at", now)
     .order("scheduled_at", { ascending: true })
@@ -83,15 +83,15 @@ export async function POST(request: Request) {
     if (job) {
       await notifyAdmins({
         topicKey: "social.publishing",
-        title: `${job.title} is publishing to Telegram`,
-        message: "The live Telegram provider claimed this scheduled job.",
+        title: `${job.title} is publishing to ${job.platform === "twitter" ? "X" : "Telegram"}`,
+        message: `The live ${job.platform === "twitter" ? "X" : "Telegram"} provider claimed this scheduled job.`,
         targetUrl: "/dashboard/posts",
         actionLabel: "Open Social Ops",
         postId: row.post_id,
         eventId: job.event?.id ?? null,
         dedupeKey: `social.publishing:${row.id}:${(row.attempt_count ?? 0) + 1}`,
         dedupeMinutes: 10,
-        payload: { platform: "telegram" },
+        payload: { platform: job.platform },
       }).catch(() => undefined);
     }
 
@@ -141,18 +141,18 @@ export async function POST(request: Request) {
 
       await notifyAdmins({
         topicKey: "social.published",
-        title: `${job.title} published to Telegram`,
+        title: `${job.title} published to ${job.platform === "twitter" ? "X" : "Telegram"}`,
         message: result.postUrl
-          ? "Telegram accepted the post successfully. Tap to inspect Social Ops or open the live Telegram post."
-          : "Telegram accepted the post successfully.",
+          ? `${job.platform === "twitter" ? "X" : "Telegram"} accepted the post successfully. Tap to inspect Social Ops or open the live post.`
+          : `${job.platform === "twitter" ? "X" : "Telegram"} accepted the post successfully.`,
         targetUrl: "/dashboard/posts",
         actionLabel: "Open Social Ops",
         postId: row.post_id,
         eventId: job.event?.id ?? null,
-        dedupeKey: `social.published:${row.id}:${result.providerPostId ?? "telegram"}`,
+        dedupeKey: `social.published:${row.id}:${result.providerPostId ?? job.platform}`,
         dedupeMinutes: 1440,
         payload: {
-          platform: "telegram",
+          platform: job.platform,
           platformPostId: result.providerPostId ?? null,
           postUrl: result.postUrl ?? null,
         },
@@ -161,7 +161,7 @@ export async function POST(request: Request) {
       results.push({
         platformId: row.id,
         ok: true,
-        platform: "telegram",
+        platform: job.platform,
         postUrl: result.postUrl ?? null,
         providerPostId: result.providerPostId ?? null,
       });
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
         .update({
           status: "scheduled",
           scheduled_at: nextAttemptAt,
-          last_error: result.error ?? "Telegram publishing failed.",
+          last_error: result.error ?? `${job.platform === "twitter" ? "X" : "Telegram"} publishing failed.`,
           attempt_count: nextAttemptCount,
           provider_response: result.providerResponse ?? {},
           last_provider_check: new Date().toISOString(),
@@ -208,7 +208,7 @@ export async function POST(request: Request) {
       .from("post_platforms")
       .update({
         status: "failed",
-        last_error: result.error ?? "Telegram publishing failed.",
+        last_error: result.error ?? `${job.platform === "twitter" ? "X" : "Telegram"} publishing failed.`,
         attempt_count: nextAttemptCount,
         provider_response: result.providerResponse ?? {},
         last_provider_check: new Date().toISOString(),
@@ -219,10 +219,10 @@ export async function POST(request: Request) {
 
     await notifyAdmins({
       topicKey: "social.publish_failed",
-      title: `${job.title} failed to publish to Telegram`,
+      title: `${job.title} failed to publish to ${job.platform === "twitter" ? "X" : "Telegram"}`,
       message:
         result.error ??
-        "Telegram returned an unknown publishing failure.",
+        `${job.platform === "twitter" ? "X" : "Telegram"} returned an unknown publishing failure.`,
       targetUrl: "/dashboard/posts",
       actionLabel: "Inspect failure",
       postId: row.post_id,
@@ -230,7 +230,7 @@ export async function POST(request: Request) {
       dedupeKey: `social.publish_failed:${row.id}:${nextAttemptCount}`,
       dedupeMinutes: 5,
       payload: {
-        platform: "telegram",
+        platform: job.platform,
         attempts: nextAttemptCount,
       },
     });

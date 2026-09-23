@@ -32,8 +32,8 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const includeTelegram =
-    url.searchParams.get("includeTelegram") === "1";
+  const includeLive =
+    url.searchParams.get("includeLive") === "1";
 
   const supabase = createAdminSupabaseClient();
   const now = new Date().toISOString();
@@ -80,10 +80,12 @@ export async function GET(request: Request) {
     .eq("status", "scheduled")
     .lte("scheduled_at", now);
 
-  // v25.0 Telegram is handled by /social-dispatch to avoid duplicate sends.
-  // The generic jobs endpoint remains available for future X/Instagram adapters.
-  if (!includeTelegram) {
-    query = query.neq("platform", "telegram");
+  // v25.1 Telegram and X are handled by /social-dispatch to avoid duplicate sends.
+  // The generic jobs endpoint remains available for future provider adapters.
+  if (!includeLive) {
+    query = query
+      .neq("platform", "telegram")
+      .neq("platform", "twitter");
   }
 
   const { data, error } = await query
@@ -122,9 +124,9 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     jobs,
-    note: includeTelegram
-      ? "Telegram included explicitly."
-      : "Telegram excluded because v25.0 live Telegram is dispatched by /api/integrations/make/social-dispatch.",
+    note: includeLive
+      ? "Live providers included explicitly."
+      : "Telegram and X are excluded because v25.1 dispatches both through /api/integrations/make/social-dispatch.",
   });
 }
 
