@@ -1,3 +1,306 @@
+# Dusk Industries™ v26 Alpha — Convention Ops + CHAOS COPILOT™
+
+v26 Alpha rebuilds the broken Con Prep area into Convention Operations and
+introduces Chaos Copilot™ as the AI operations layer across convention prep and
+Social Ops.
+
+## Major systems
+
+```text
+WikiFur convention catalog
+      ↓
+I'M GOING
+      ↓
+Event + Tactical Deployment Plan
+      ↓
+Convention Ops deployment
+      ↓
+Packing / nested kits
+Tasks / nested subtasks
+Travel / hotel / badge / budget
+      ↓
+CHAOS COPILOT™
+      ↓
+proposed actions
+      ↓
+user approval
+      ↓
+typed Dusk tools
+      ↓
+Supabase
+```
+
+## Convention catalog source policy
+
+v26 Alpha pre-populates from WikiFur's ongoing in-person conventions ordered by
+latest announced attendance.
+
+Source precedence:
+
+```text
+1. Official convention website / official social
+2. WikiFur
+3. Other/manual sources
+```
+
+The catalog snapshot contains 126 ongoing conventions. A Sync WikiFur control
+refreshes WikiFur-backed entries while preserving records explicitly marked as
+official overrides.
+
+## One-click deployment
+
+`I'm Going` creates:
+
+- Event record
+- Tactical Deployment Plan
+- Convention Ops record
+- baseline prep tasks
+- reusable packing loadouts
+- readiness state
+
+Manual deployments remain available.
+
+## Nested checklists
+
+Packing items and prep tasks now support parent/child nesting.
+
+Example:
+
+```text
+Donk Toss Kit
+  ├─ Official tournament kit
+  ├─ Rules / host notes
+  ├─ Signage
+  ├─ Prizes
+  ├─ Stickers
+  └─ Tape / setup supplies
+```
+
+Parents can be expanded for detailed checking while still functioning as one
+high-level readiness item.
+
+## Chaos Copilot™
+
+Chaos Copilot is embedded in:
+
+- Dashboard overview
+- Convention Ops deployments
+- Social Ops
+
+The v26 Alpha agent reads structured Dusk state and may propose:
+
+- packing items
+- nested kit contents
+- prep tasks / subtasks
+- Social Ops caption rewrites
+- per-platform copy
+- Social scheduling plans
+- sensitive publish-now proposals
+
+AI writes do not directly mutate arbitrary Supabase tables. They create
+`copilot_actions` records that require explicit user approval.
+
+Sensitive actions additionally require a fresh Supabase password
+reauthentication grant.
+
+## Future Beta compatibility
+
+New v26 user-owned records include `user_id` / `owner_user_id` now even though
+Alpha remains the single-user Dusk deployment. This is deliberate groundwork
+for the future multi-profile Beta without baking one furry's profile directly
+into the new architecture.
+
+## SQL
+
+Run:
+
+```text
+supabase/migrations/20260923_v26_alpha_chaos_ops.sql
+```
+
+## New environment variable
+
+```text
+OPENAI_API_KEY
+OPENAI_MODEL=gpt-6-astra
+```
+
+## Install
+
+See:
+
+```text
+UPGRADE_FROM_V25_3_TO_V26_ALPHA.md
+```
+
+---
+
+# Dusk Industries™ v26.0 Alpha — Convention Operations + CHAOS COPILOT™
+
+v26 Alpha is the first major operations/AI release.
+
+## Convention Operations
+
+The broken legacy Con Prep page is replaced by **Deployment Command**.
+
+Key flow:
+
+```text
+Convention Catalog
+      ↓
+I'M GOING
+      ↓
+Event
+      ↓
+Tactical Deployment Plan
+      ↓
+Convention Ops deployment
+      ↓
+packing + tasks + travel + hotel + registration + costs
+```
+
+The pre-populated convention catalog follows WikiFur's **ongoing in-person
+conventions ranked by latest attendance**.
+
+Catalog source priority is explicit:
+
+```text
+1. Official convention website/social
+2. WikiFur
+3. Other/manual sources
+```
+
+Official-source records are preserved when the WikiFur snapshot is reloaded.
+
+## Expandable nested checklists
+
+Both packing and tasks support arbitrary nesting.
+
+Example:
+
+```text
+Donk Toss Kit
+├─ Official tournament kit
+├─ Rules / host notes
+├─ Signage
+├─ Prizes
+├─ Stickers
+└─ Tape / setup supplies
+```
+
+Parent completion cascades through descendants; completed children reconcile
+their parent state.
+
+## Convention catalog
+
+v26 Alpha ships with a snapshot of WikiFur's ongoing in-person convention
+attendance list and stores ranking/attendance metadata.
+
+Entries with an upcoming WikiFur date can be deployed immediately.
+
+If an attendance-ranked entry has no current date in the source snapshot, the
+UI asks for the current start/end dates before creating the deployment rather
+than inventing them.
+
+Manual deployments remain available.
+
+## Future-Beta-safe ownership
+
+New v26 structures already carry user ownership:
+
+```text
+con_preps.owner_user_id
+operator_preferences.user_id
+copilot_threads.user_id
+copilot_actions.user_id
+loadout_templates.owner_user_id
+security_grants.user_id
+```
+
+Alpha remains the single-operator Dusk experience. These fields are groundwork
+for the later Beta multi-profile system; they do not expose public registration
+yet.
+
+## CHAOS COPILOT™
+
+Chaos Copilot is embedded in:
+
+```text
+Dashboard overview
+Convention deployment pages
+Social Ops
+```
+
+It reads fresh structured Supabase context instead of relying on conversational
+memory for current deployment state.
+
+The Alpha supports proposal tools for:
+
+```text
+packing items + nested kit items
+prep tasks + subtasks
+Social Ops master/platform copy
+Social scheduling proposals
+sensitive publish-now proposal gate
+```
+
+AI actions are persisted to `copilot_actions`.
+
+Normal database-changing suggestions require explicit **Apply**.
+
+Sensitive proposals require:
+
+```text
+explicit approval
+      +
+Supabase password reauthentication
+      ↓
+one-use 10-minute security grant
+```
+
+The raw reauthentication grant is never stored; Supabase stores only its SHA-256
+hash.
+
+Immediate AI-triggered publication remains intentionally disabled in Alpha even
+after step-up auth: the user is redirected to the normal Social Ops controls.
+The reauth plumbing is in place before higher-agency actions are enabled.
+
+## Social optimization
+
+Chaos Copilot can inspect Social Ops records and propose:
+- canonical caption rewrites
+- platform-specific wording
+- schedule changes
+- deployment-document-aware copy
+
+It is instructed to distinguish actual Dusk historical metrics from generic
+reasoning and to say when performance history is too sparse for a data-backed
+recommendation.
+
+## SQL
+
+Run:
+
+```text
+supabase/migrations/20260923_v26_alpha_chaos_ops.sql
+```
+
+## New environment
+
+```text
+OPENAI_API_KEY
+OPENAI_MODEL=gpt-6-astra
+```
+
+## Setup
+
+```text
+UPGRADE_FROM_V25_3.md
+V26_ALPHA_SETUP.md
+```
+
+---
+
 # Dusk Industries™ v25.3 — Live Bluesky Publishing
 
 v25.3 replaces the previously planned Snapchat release with Bluesky.

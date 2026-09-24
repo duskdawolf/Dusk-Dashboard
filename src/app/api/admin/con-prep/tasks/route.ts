@@ -5,40 +5,45 @@ import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 const CreateSchema = z.object({
   conPrepId: z.string().uuid(),
-  parentItemId: z.string().uuid().nullable().optional(),
-  category: z.string().min(1).max(120).default("General"),
-  label: z.string().min(1).max(240),
-  quantity: z.number().int().positive().max(99).default(1),
+  parentTaskId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(300),
+  taskType: z.string().min(1).max(80).default("prep"),
+  dueAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 const UpdateSchema = z.object({
-  itemId: z.string().uuid(),
-  packed: z.boolean(),
+  taskId: z.string().uuid(),
+  status: z.enum(["todo", "scheduled", "doing", "done", "skipped"]),
 });
 
 async function syncParent(parentId: string | null) {
   if (!parentId) return;
   const supabase = createAdminSupabaseClient();
-
   const { data: children } = await supabase
-    .from("packing_items")
-    .select("packed")
-    .eq("parent_item_id", parentId);
+    .from("prep_tasks")
+    .select("status")
+    .eq("parent_task_id", parentId);
 
   if (!children?.length) return;
 
-  await supabase
-    .from("packing_items")
-    .update({ packed: children.every((item: { packed: boolean }) => item.packed) })
-    .eq("id", parentId);
+  const complete = children.every((task: { status: string }) =>
+    ["done", "skipped"].includes(task.status),
+  );
+
+  if (complete) {
+    await supabase
+      .from("prep_tasks")
+      .update({ status: "done" })
+      .eq("id", parentId);
+  }
 
   const { data: parent } = await supabase
-    .from("packing_items")
-    .select("parent_item_id")
+    .from("prep_tasks")
+    .select("parent_task_id")
     .eq("id", parentId)
     .maybeSingle();
 
-  await syncParent(parent?.parent_item_id ?? null);
+  await syncParent(parent?.parent_task_id ?? null);
 }
 
 export async function POST(request: Request) {
@@ -49,21 +54,21 @@ export async function POST(request: Request) {
   const parsed = CreateSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid packing item.", details: parsed.error.flatten() },
+      { error: "Invalid prep task.", details: parsed.error.flatten() },
       { status: 400 },
     );
   }
 
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
-    .from("packing_items")
+    .from("prep_tasks")
     .insert({
       con_prep_id: parsed.data.conPrepId,
-      parent_item_id: parsed.data.parentItemId ?? null,
-      category: parsed.data.category,
-      label: parsed.data.label,
-      quantity: parsed.data.quantity,
-      packed: false,
+      parent_task_id: parsed.data.parentTaskId ?? null,
+      title: parsed.data.title,
+      task_type: parsed.data.taskType,
+      due_at: parsed.data.dueAt ?? null,
+      status: "todo",
       source: "manual",
       required: true,
     })
@@ -72,12 +77,12 @@ export async function POST(request: Request) {
 
   if (error) {
     return NextResponse.json(
-      { error: "Could not add packing item.", detail: error.message },
+      { error: "Could not add prep task.", detail: error.message },
       { status: 500 },
     );
   }
 
-  return NextResponse.json({ item: data }, { status: 201 });
+  return NextResponse.json({ task: data }, { status: 201 });
 }
 
 export async function PATCH(request: Request) {
@@ -86,46 +91,43 @@ export async function PATCH(request: Request) {
   }
 
   const parsed = UpdateSchema.safeParse(await request.json());
-
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid packing item." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid prep task." }, { status: 400 });
   }
 
   const supabase = createAdminSupabaseClient();
-
-  const { data: item } = await supabase
-    .from("packing_items")
-    .select("parent_item_id,con_prep_id")
-    .eq("id", parsed.data.itemId)
+  const { data: task } = await supabase
+    .from("prep_tasks")
+    .select("parent_task_id,con_prep_id")
+    .eq("id", parsed.data.taskId)
     .maybeSingle();
 
   const { error } = await supabase
-    .from("packing_items")
-    .update({ packed: parsed.data.packed })
-    .eq("id", parsed.data.itemId);
+    .from("prep_tasks")
+    .update({ status: parsed.data.status })
+    .eq("id", parsed.data.taskId);
 
   if (error) {
     return NextResponse.json(
-      { error: "Could not update packing item.", detail: error.message },
+      { error: "Could not update prep task.", detail: error.message },
       { status: 500 },
     );
   }
 
-  // Parent toggles cascade through the entire nested checklist.
-  if (item?.con_prep_id) {
-    const { data: allItems } = await supabase
-      .from("packing_items")
-      .select("id,parent_item_id")
-      .eq("con_prep_id", item.con_prep_id);
+  if (parsed.data.status === "done" && task?.con_prep_id) {
+    const { data: allTasks } = await supabase
+      .from("prep_tasks")
+      .select("id,parent_task_id")
+      .eq("con_prep_id", task.con_prep_id);
 
     const descendants: string[] = [];
-    const queue = [parsed.data.itemId];
+    const queue = [parsed.data.taskId];
 
     while (queue.length) {
       const parentId = queue.shift()!;
-      for (const candidate of allItems ?? []) {
+      for (const candidate of allTasks ?? []) {
         if (
-          candidate.parent_item_id === parentId &&
+          candidate.parent_task_id === parentId &&
           !descendants.includes(candidate.id)
         ) {
           descendants.push(candidate.id);
@@ -136,13 +138,13 @@ export async function PATCH(request: Request) {
 
     if (descendants.length) {
       await supabase
-        .from("packing_items")
-        .update({ packed: parsed.data.packed })
+        .from("prep_tasks")
+        .update({ status: "done" })
         .in("id", descendants);
     }
   }
 
-  await syncParent(item?.parent_item_id ?? null);
+  await syncParent(task?.parent_task_id ?? null);
 
   return NextResponse.json({ ok: true });
 }

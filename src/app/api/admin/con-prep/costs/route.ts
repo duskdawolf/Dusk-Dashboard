@@ -13,7 +13,9 @@ const Payload = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!(await getDashboardUser())) {
+  const user = await getDashboardUser();
+
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
     .insert({
       con_prep_id: input.conPrepId,
       event_id: prep?.event_id ?? null,
+      owner_user_id: user.id,
       category: input.category,
       vendor: input.vendor || null,
       description: input.description || null,

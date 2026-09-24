@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChaosCopilot } from "@/components/ChaosCopilot";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dusk Dashboard" };
@@ -40,14 +41,16 @@ export default async function DashboardPage() {
     },
     {
       href: "/dashboard/con-prep",
-      title: "Con Prep",
+      title: "Convention Ops",
       value: prepCount ?? 0,
-      text: "Packing, travel, prep tasks, production work, and convention logistics.",
+      text: "Deploy conventions, build nested packing/loadouts, plan travel, production, readiness, and Tactical Deployment Plans.",
     },
   ];
 
   return (
-    <section>
+    <section className="space-y-6">
+      <ChaosCopilot contextType="global" />
+
       <div className="grid gap-4 md:grid-cols-2">
         {modules.map((module) => (
           <Link
@@ -64,13 +67,14 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="panel mt-6">
+      <div className="panel">
         <div className="eyebrow">Automation architecture</div>
         <h2 className="text-2xl font-black">One record, many destinations.</h2>
         <p className="mt-3 max-w-4xl text-slate-400">
-          The target workflow is ChatGPT → Make → Supabase + calendar +
-          communications + accounting. The website renders the same data instead
-          of maintaining its own separate copy.
+          v26 Alpha makes Chaos Copilot™ the natural-language operations layer
+          over the same typed Dusk tools used by the dashboard. Supabase remains
+          the source of truth; AI changes are proposed for approval instead of
+          writing arbitrary database state.
         </p>
       </div>
     </section>

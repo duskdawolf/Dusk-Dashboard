@@ -1,6 +1,6 @@
-# Upgrade old Dusk Industries v6 → current v25.3
+# Upgrade old Dusk Industries v6 → current v26 Alpha
 
-The v25.3 package is cumulative. Do not install every historical release one by
+The v26 Alpha package is cumulative. Do not install every historical release one by
 one.
 
 ## Fresh / empty Supabase project
@@ -142,3 +142,25 @@ Full Telegram steps:
 ```text
 TELEGRAM_SOCIAL_SETUP.md
 ```
+
+
+## v26 Alpha Chaos Copilot™
+
+```text
+OPENAI_API_KEY
+OPENAI_MODEL=gpt-6-astra
+```
+
+Run:
+
+```text
+supabase/migrations/20260923_v26_alpha_chaos_ops.sql
+```
+
+Then open:
+
+```text
+/dashboard/con-prep
+```
+
+to initialize/sync the WikiFur convention catalog and test Convention Ops.

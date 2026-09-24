@@ -1,6 +1,6 @@
 {
   "name": "dusk-industries",
-  "version": "25.3.0",
+  "version": "26.0.0-alpha.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -22,7 +22,8 @@
     "topojson-client": "latest",
     "us-atlas": "latest",
     "luxon": "latest",
-    "web-push": "latest"
+    "web-push": "latest",
+    "openai": "latest"
   },
   "devDependencies": {
     "@types/node": "latest",
