@@ -257,35 +257,29 @@ async function threadFor(args: {
   const supabase = createAdminSupabaseClient();
 
   if (args.threadId) {
-    const { data } = await supabase
+    let query = supabase
       .from("copilot_threads")
       .select("*")
       .eq("id", args.threadId)
       .eq("user_id", args.userId)
-      .maybeSingle();
+      .eq("context_type", args.contextType)
+      .eq("archived", false);
 
+    if (args.conPrepId) query = query.eq("con_prep_id", args.conPrepId);
+    else query = query.is("con_prep_id", null);
+
+    if (args.postId) query = query.eq("post_id", args.postId);
+    else query = query.is("post_id", null);
+
+    const { data } = await query.maybeSingle();
+
+    // Never let a stale browser thread cross deployment/social scopes.
     if (data) return data;
   }
 
-  let query = supabase
-    .from("copilot_threads")
-    .select("*")
-    .eq("user_id", args.userId)
-    .eq("context_type", args.contextType)
-    .eq("archived", false);
-
-  if (args.conPrepId) query = query.eq("con_prep_id", args.conPrepId);
-  else query = query.is("con_prep_id", null);
-
-  if (args.postId) query = query.eq("post_id", args.postId);
-  else query = query.is("post_id", null);
-
-  const { data: existing } = await query
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing) return existing;
+  // No threadId means a genuinely fresh conversation. This is deliberate:
+  // switching deployments remounts Chaos Copilot and therefore starts a clean
+  // deployment-scoped chat instead of carrying another con's conversation.
 
   const { data, error } = await supabase
     .from("copilot_threads")

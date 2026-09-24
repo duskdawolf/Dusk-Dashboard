@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type ContextType = "global" | "deployment" | "social";
 
@@ -23,11 +23,13 @@ export function ChaosCopilot({
   contextType = "global",
   conPrepId,
   postId,
+  contextLabel,
   compact = false,
 }: {
   contextType?: ContextType;
   conPrepId?: string | null;
   postId?: string | null;
+  contextLabel?: string | null;
   compact?: boolean;
 }) {
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -38,6 +40,40 @@ export function ChaosCopilot({
   const [busy, setBusy] = useState(false);
   const [reauthActionId, setReauthActionId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const lastContextKey = useRef("");
+
+  const contextKey = `${contextType}:${conPrepId ?? ""}:${postId ?? ""}`;
+
+  useEffect(() => {
+    if (lastContextKey.current === contextKey) return;
+
+    lastContextKey.current = contextKey;
+    setThreadId(null);
+    setMessages([]);
+    setActions([]);
+    setInput("");
+    setStatus(
+      contextLabel
+        ? `Chaos Copilot switched to ${contextLabel}. Fresh deployment context loaded.`
+        : "Chaos Copilot context switched. Fresh chat loaded.",
+    );
+    setReauthActionId(null);
+    setPassword("");
+  }, [contextKey, contextLabel]);
+
+  function newChat() {
+    setThreadId(null);
+    setMessages([]);
+    setActions([]);
+    setInput("");
+    setStatus(
+      contextLabel
+        ? `New Chaos Copilot chat started for ${contextLabel}.`
+        : "New Chaos Copilot chat started.",
+    );
+    setReauthActionId(null);
+    setPassword("");
+  }
 
   async function send(event: FormEvent) {
     event.preventDefault();
@@ -192,15 +228,24 @@ export function ChaosCopilot({
           </h2>
           <p className="mt-1 text-xs text-slate-500">
             {contextType === "deployment"
-              ? "Scoped to this Tactical Deployment."
+              ? `Scoped only to ${contextLabel || "this Tactical Deployment"}. Switching deployments starts a fresh scoped chat.`
               : contextType === "social"
                 ? "Scoped to Social Ops."
                 : "Global Dusk operations context."}
           </p>
         </div>
-        <span className="tag !mt-0">
-          proposals require approval
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="tag !mt-0">
+            proposals require approval
+          </span>
+          <button
+            className="button-secondary !px-3 !py-2 text-xs"
+            type="button"
+            onClick={newChat}
+          >
+            New Chat
+          </button>
+        </div>
       </div>
 
       {messages.length ? (
@@ -325,6 +370,29 @@ export function ChaosCopilot({
             </button>
           </div>
         </form>
+      ) : null}
+
+      {contextType === "deployment" ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[
+            "Suggest packing items I may be missing.",
+            "Suggest prep tasks and useful subtasks for this deployment.",
+            "Find the biggest readiness blockers for this deployment.",
+          ].map((prompt) => (
+            <button
+              key={prompt}
+              className="button-secondary !px-3 !py-2 text-xs"
+              type="button"
+              onClick={() => setInput(prompt)}
+            >
+              {prompt.startsWith("Suggest packing")
+                ? "Suggest Packing"
+                : prompt.startsWith("Suggest prep")
+                  ? "Suggest Tasks"
+                  : "Find Blockers"}
+            </button>
+          ))}
+        </div>
       ) : null}
 
       <form className="mt-4" onSubmit={send}>

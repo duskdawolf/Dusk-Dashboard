@@ -28,6 +28,7 @@ export default async function ConventionOpsPage() {
     { data: preps, error: prepError },
     { data: conventions, error: conventionError },
     { data: loadouts, error: loadoutError },
+    { data: taskTemplates, error: taskTemplateError },
   ] = await Promise.all([
     supabase
       .from("con_preps")
@@ -54,12 +55,19 @@ export default async function ConventionOpsPage() {
       .eq("active", true)
       .order("category")
       .order("name"),
+    supabase
+      .from("prep_task_templates")
+      .select("id,slug,name,description,category")
+      .eq("active", true)
+      .order("category")
+      .order("name"),
   ]);
 
   const error =
     prepError?.message ||
     conventionError?.message ||
     loadoutError?.message ||
+    taskTemplateError?.message ||
     catalogError;
 
   return (
@@ -67,6 +75,7 @@ export default async function ConventionOpsPage() {
       initialPreps={(preps ?? []) as never[]}
       conventions={(conventions ?? []) as never[]}
       loadouts={(loadouts ?? []) as never[]}
+      taskTemplates={(taskTemplates ?? []) as never[]}
       userId={user.id}
       initialError={error ?? ""}
     />

@@ -37,7 +37,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("con_preps")
     .select(
-      "*, events(id,title,start_at,location,event_type), packing_items(*), prep_tasks(*), travel_segments(*), hotel_stays(*), con_registrations(*), cost_entries(*)"
+      "*, events(id,title,slug,start_at,end_at,location,event_type), packing_items(*), prep_tasks(*), travel_segments(*), hotel_stays(*), con_registrations(*), cost_entries(*)"
     )
     .order("created_at", { ascending: false });
 

@@ -50,6 +50,12 @@ const DEFAULT_TASKS = [
     days_before: 1,
     duration_minutes: 30,
   },
+  {
+    title: "Hotel checkout / room sweep",
+    task_type: "hotel",
+    days_before: 0,
+    duration_minutes: 20,
+  },
 ];
 
 function dateAtLocalNoon(date: string) {
