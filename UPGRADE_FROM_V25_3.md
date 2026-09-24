@@ -43,7 +43,7 @@ Vercel → Project → Settings → Environment Variables:
 
 ```text
 OPENAI_API_KEY=<your server-side key>
-OPENAI_MODEL=gpt-5.6
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 `OPENAI_API_KEY` must never be prefixed with `NEXT_PUBLIC_`.

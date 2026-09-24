@@ -9,6 +9,10 @@ import {
 } from "@/lib/copilot/context";
 import { createCopilotAction } from "@/lib/copilot/actions";
 import { ensureProfileRow } from "@/lib/profiles";
+import {
+  copilotUsageMetadata,
+  normalizeCopilotUsage,
+} from "@/lib/copilot/usage";
 
 export const maxDuration = 60;
 
@@ -319,7 +323,7 @@ CRITICAL RULES:
 - Publishing immediately is sensitive: use propose_publish_now and explain that reauthentication is required.
 - Nested packing/task structure is encouraged for kits: e.g. "Donk Toss Kit" parent with individual components as children.
 - For social optimization, distinguish actual historical Dusk metrics from generic reasoning. If the history is insufficient, say confidence is limited.
-- Keep platform constraints in mind: Bluesky 300 graphemes in v25.3, Instagram media required / 2200 caption, X configured limit, Telegram media/text behavior.
+- Keep platform constraints in mind: Bluesky 300 graphemes, Instagram media required / 2200 caption, X configured limit, Telegram media/text behavior.
 - ${contextType === "deployment" ? "Prioritize the current convention deployment." : contextType === "social" ? "Prioritize Social Ops wording, timing, media, and platform variants." : "Prioritize the most actionable Dusk operations across deployments and Social Ops."}`;
 }
 
@@ -373,7 +377,7 @@ export async function POST(request: Request) {
       .select("role,content")
       .eq("thread_id", thread.id)
       .order("created_at", { ascending: false })
-      .limit(12);
+      .limit(4);
 
     const context = await loadCopilotContext({
       userId: user.id,
@@ -383,11 +387,11 @@ export async function POST(request: Request) {
     });
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const model =
+      process.env.OPENAI_COPILOT_MODEL?.trim() || "gpt-5.6-luna";
 
-    // Keep the persisted Supabase history as simple Responses API input
-    // messages. Explicitly preserve the literal role union; otherwise
-    // TypeScript widens the ternary below to `string`, which is not assignable
-    // to ResponseInputItem in recent OpenAI SDK versions.
+    // Keep only the last few turns. Supabase is our durable conversation store;
+    // there is no reason to rebill a long transcript on every tiny interaction.
     const historyInput: Array<{
       role: "user" | "assistant";
       content: string;
@@ -401,9 +405,17 @@ export async function POST(request: Request) {
         content: String(item.content ?? ""),
       }));
 
+    // Explicit cache mode with NO breakpoint intentionally disables prompt
+    // cache writes for this highly dynamic workflow. If we later identify a
+    // stable reusable prefix worth caching, we can add one breakpoint there
+    // without paying cache-write rates on deployment/post state.
     const response: any = await openai.responses.create({
-      model: process.env.OPENAI_MODEL || "gpt-6-astra",
-      store: true,
+      model,
+      store: false,
+      reasoning: { effort: "low" },
+      text: { verbosity: "low" },
+      max_output_tokens: 900,
+      prompt_cache_options: { mode: "explicit" },
       instructions: instructions(input.contextType),
       tools,
       tool_choice: "auto",
@@ -411,8 +423,8 @@ export async function POST(request: Request) {
         {
           role: "developer" as const,
           content:
-            "Current Dusk structured context:\n" +
-            JSON.stringify(context, null, 2),
+            "Current Dusk context. Keep this deployment/post identity exact; infer ordinary planning details rather than asking for data that is not needed.\n" +
+            JSON.stringify(context),
         },
         ...historyInput,
       ],
@@ -423,7 +435,6 @@ export async function POST(request: Request) {
     });
 
     const actionRows: any[] = [];
-    const toolOutputs: any[] = [];
 
     for (const item of response.output ?? []) {
       if (item.type !== "function_call") continue;
@@ -436,18 +447,7 @@ export async function POST(request: Request) {
       }
 
       const proposal = proposalFromCall(item.name, args);
-
-      if (!proposal) {
-        toolOutputs.push({
-          type: "function_call_output",
-          call_id: item.call_id,
-          output: JSON.stringify({
-            ok: false,
-            error: "Unsupported proposal tool.",
-          }),
-        });
-        continue;
-      }
+      if (!proposal) continue;
 
       const action = await createCopilotAction({
         threadId: thread.id,
@@ -460,47 +460,44 @@ export async function POST(request: Request) {
       });
 
       actionRows.push(action);
-      toolOutputs.push({
-        type: "function_call_output",
-        call_id: item.call_id,
-        output: JSON.stringify({
-          ok: true,
-          proposed_action_id: action.id,
-          status: "awaiting_user_approval",
-          requires_reauth: action.requires_reauth,
-        }),
-      });
     }
 
-    let finalResponse = response;
-
-    if (toolOutputs.length) {
-      finalResponse = await openai.responses.create({
-        model: process.env.OPENAI_MODEL || "gpt-6-astra",
-        store: true,
-        previous_response_id: response.id,
-        instructions: instructions(input.contextType),
-        tools,
-        input: toolOutputs,
-      });
-    }
+    // Tool proposals already contain a title/explanation. Rendering them
+    // directly saves an entire second model request per actionable turn.
+    const proposedText = actionRows.length
+      ? actionRows
+          .map(
+            (action) =>
+              `${action.title}${
+                action.explanation ? ` — ${action.explanation}` : ""
+              }`,
+          )
+          .join("\n\n")
+      : "";
 
     const assistantText =
-      finalResponse.output_text ||
-      response.output_text ||
-      (actionRows.length
-        ? `I prepared ${actionRows.length} proposed action${
-            actionRows.length === 1 ? "" : "s"
-          } for review.`
-        : "I couldn't produce a response for that request.");
+      String(response.output_text ?? "").trim() ||
+      proposedText ||
+      "I couldn't produce a response for that request.";
+
+    const usage = normalizeCopilotUsage(response, model);
 
     await supabase.from("copilot_messages").insert({
       thread_id: thread.id,
       role: "assistant",
       content: assistantText,
       metadata: {
-        openai_response_id: finalResponse.id,
+        openai_response_id: response.id,
         proposed_action_ids: actionRows.map((action) => action.id),
+        usage: copilotUsageMetadata(usage),
+        optimization: {
+          store: false,
+          reasoning_effort: "low",
+          verbosity: "low",
+          history_messages: historyInput.length,
+          prompt_cache_mode: "explicit_no_breakpoint",
+          second_model_call: false,
+        },
       },
     });
 

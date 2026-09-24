@@ -114,7 +114,7 @@ Required Vercel variables:
 
 ```text
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-5.6
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 Alpha contexts:

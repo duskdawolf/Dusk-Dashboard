@@ -65,6 +65,14 @@ type Loadout = {
   category: string;
 };
 
+type TaskTemplate = {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  category: string;
+};
+
 function conventionLocation(con: Convention) {
   return [con.city, con.region, con.country].filter(Boolean).join(", ");
 }
@@ -106,11 +114,13 @@ export function ConOpsManager({
   initialPreps,
   conventions,
   loadouts,
+  taskTemplates,
   initialError,
 }: {
   initialPreps: Prep[];
   conventions: Convention[];
   loadouts: Loadout[];
+  taskTemplates: TaskTemplate[];
   userId: string;
   initialError: string;
 }) {
@@ -361,6 +371,29 @@ export function ConOpsManager({
       await refresh();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not add loadout.");
+    }
+  }
+
+  async function addTaskTemplate(slug: string) {
+    if (!selectedPrep) return;
+
+    try {
+      const body = await jsonRequest("/api/admin/con-prep/task-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conPrepId: selectedPrep.id,
+          templateSlug: slug,
+        }),
+      });
+      setStatus(
+        `Suggested task set added${body.added ? ` · ${body.added} new tasks` : ""}.`,
+      );
+      await refresh();
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "Could not add suggested tasks.",
+      );
     }
   }
 
@@ -794,7 +827,27 @@ export function ConOpsManager({
 
               <details className="p-4" open>
                 <summary className="cursor-pointer list-none">
-                  <strong className="text-xl">Tasks & Subtasks</strong>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <strong className="text-xl">Tasks & Subtasks</strong>
+                    <select
+                      className="form-input max-w-xs"
+                      defaultValue=""
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        if (event.target.value) {
+                          addTaskTemplate(event.target.value);
+                          event.target.value = "";
+                        }
+                      }}
+                    >
+                      <option value="">+ Add suggested task set</option>
+                      {taskTemplates.map((template) => (
+                        <option key={template.id} value={template.slug}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </summary>
 
                 <div className="mt-3 flex flex-wrap gap-2">

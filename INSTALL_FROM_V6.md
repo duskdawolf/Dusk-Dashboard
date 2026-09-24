@@ -148,7 +148,7 @@ TELEGRAM_SOCIAL_SETUP.md
 
 ```text
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-6-astra
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 Run:

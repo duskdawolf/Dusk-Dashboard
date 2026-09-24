@@ -6,7 +6,7 @@ Add:
 
 ```text
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-6-astra
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 `OPENAI_API_KEY` must remain server-side. Do not use a `NEXT_PUBLIC_` prefix.
@@ -128,3 +128,22 @@ carry `owner_user_id`.
 
 Alpha remains the private Dusk deployment. The ownership columns are groundwork
 for the later multi-profile Beta rather than a public-registration feature.
+
+
+## Alpha 4 cost controls
+
+Alpha 4 defaults to:
+
+```text
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
+reasoning=low
+verbosity=low
+max output=900 tokens
+store=false
+prompt caching=explicit-only, no breakpoint
+history=last 4 messages
+```
+
+With explicit cache mode and no explicit breakpoint, the request does not create
+prompt-cache writes. Dusk records the OpenAI usage object on each assistant
+message and exposes a rolling 24-hour admin usage card on `/dashboard`.

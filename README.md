@@ -122,7 +122,7 @@ supabase/migrations/20260923_v26_alpha_chaos_ops.sql
 
 ```text
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-6-astra
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 ## Install
@@ -289,7 +289,7 @@ supabase/migrations/20260923_v26_alpha_chaos_ops.sql
 
 ```text
 OPENAI_API_KEY
-OPENAI_MODEL=gpt-6-astra
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 ## Setup

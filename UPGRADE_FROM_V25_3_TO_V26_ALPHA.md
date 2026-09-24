@@ -49,7 +49,7 @@ OPENAI_API_KEY
 Optional:
 
 ```text
-OPENAI_MODEL=gpt-6-astra
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
 ```
 
 Keep the API key server-side. Do not expose it as `NEXT_PUBLIC_*`.

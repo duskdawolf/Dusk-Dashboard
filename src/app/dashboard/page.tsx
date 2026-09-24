@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChaosCopilot } from "@/components/ChaosCopilot";
+import { CopilotUsageCard } from "@/components/CopilotUsageCard";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Dusk Dashboard" };
@@ -50,6 +51,8 @@ export default async function DashboardPage() {
   return (
     <section className="space-y-6">
       <ChaosCopilot contextType="global" />
+
+      <CopilotUsageCard />
 
       <div className="grid gap-4 md:grid-cols-2">
         {modules.map((module) => (
