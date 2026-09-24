@@ -390,6 +390,23 @@ export async function POST(request: Request) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+    // Keep the persisted Supabase history as simple Responses API input
+    // messages. Explicitly preserve the literal role union; otherwise
+    // TypeScript widens the ternary below to `string`, which is not assignable
+    // to ResponseInputItem in recent OpenAI SDK versions.
+    const historyInput: Array<{
+      role: "user" | "assistant";
+      content: string;
+    }> = (history ?? [])
+      .reverse()
+      .map((item: any) => ({
+        role:
+          item.role === "assistant"
+            ? ("assistant" as const)
+            : ("user" as const),
+        content: String(item.content ?? ""),
+      }));
+
     const response: any = await openai.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-6-astra",
       store: true,
@@ -398,17 +415,12 @@ export async function POST(request: Request) {
       tool_choice: "auto",
       input: [
         {
-          role: "developer",
+          role: "developer" as const,
           content:
             "Current Dusk structured context:\n" +
             JSON.stringify(context, null, 2),
         },
-        ...(history ?? [])
-          .reverse()
-          .map((item: any) => ({
-            role: item.role === "assistant" ? "assistant" : "user",
-            content: item.content,
-          })),
+        ...historyInput,
       ],
       metadata: {
         dusk_thread_id: thread.id,
