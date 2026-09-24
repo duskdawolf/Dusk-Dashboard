@@ -10,6 +10,7 @@ function emptySummary() {
     cacheWriteTokens: 0,
     outputTokens: 0,
     reasoningTokens: 0,
+    webSearchCalls: 0,
     estimatedCostUsd: 0,
     pricedRequests: 0,
     models: {} as Record<string, number>,
@@ -29,6 +30,7 @@ function summarize(rows: any[]) {
     summary.cacheWriteTokens += Number(usage.cache_write_tokens ?? 0) || 0;
     summary.outputTokens += Number(usage.output_tokens ?? 0) || 0;
     summary.reasoningTokens += Number(usage.reasoning_tokens ?? 0) || 0;
+    summary.webSearchCalls += Number(usage.web_search_calls ?? 0) || 0;
 
     if (usage.estimated_cost_usd != null) {
       summary.estimatedCostUsd +=
@@ -78,6 +80,6 @@ export async function GET() {
     last24h: summarize(last24h),
     last7d: summarize(rows),
     note:
-      "Estimated cost uses the model pricing embedded in this Dusk build and actual token/cache usage returned by OpenAI. It is operational telemetry, not an invoice.",
+      "Estimated cost uses the model pricing embedded in this Dusk build, actual token/cache usage returned by OpenAI, and $0.01 per recorded web-search call. Search-content token billing may still cause small differences from the invoice.",
   });
 }

@@ -9,6 +9,7 @@ type Usage = {
   cacheWriteTokens: number;
   outputTokens: number;
   reasoningTokens: number;
+  webSearchCalls: number;
   estimatedCostUsd: number;
   pricedRequests: number;
   models: Record<string, number>;
@@ -59,9 +60,9 @@ export function CopilotUsageCard() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="eyebrow">Admin · AI spend control</div>
-          <h2 className="text-2xl font-black">Chaos Copilot Usage</h2>
+          <h2 className="text-2xl font-black">Chaos AI Usage</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Rolling 24 hours · actual OpenAI token accounting captured by Dusk.
+            Rolling 24 hours · Convention Copilot + Social Review token/tool accounting captured by Dusk.
           </p>
         </div>
         <button className="button-secondary" type="button" onClick={load}>
@@ -101,7 +102,7 @@ export function CopilotUsageCard() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
             <div className="rounded-xl border border-white/10 p-3 text-sm">
               <span className="text-slate-500">Cache reads</span>
               <strong className="float-right">{n(usage.cachedTokens)}</strong>
@@ -113,6 +114,10 @@ export function CopilotUsageCard() {
             <div className="rounded-xl border border-white/10 p-3 text-sm">
               <span className="text-slate-500">Reasoning</span>
               <strong className="float-right">{n(usage.reasoningTokens)}</strong>
+            </div>
+            <div className="rounded-xl border border-white/10 p-3 text-sm">
+              <span className="text-slate-500">Web searches</span>
+              <strong className="float-right">{n(usage.webSearchCalls)}</strong>
             </div>
           </div>
 

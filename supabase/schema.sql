@@ -1501,3 +1501,7 @@ on conflict (id) do update set
   sort_order = excluded.sort_order;
 
 commit;
+
+
+-- v26 Alpha 5 Social Review / ownership ----------------------------
+-- Dusk Industries v26.0 Alpha 5\n-- Social Review workflow + future multi-profile ownership groundwork.\n\nbegin;\n\nalter table public.posts\n  add column if not exists owner_user_id uuid references public.profiles(id) on delete set null;\n\ncreate index if not exists posts_owner_user_idx\n  on public.posts(owner_user_id, created_at desc);\n\ncommit;\n

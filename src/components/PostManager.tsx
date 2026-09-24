@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { deploymentDocumentLabel, deploymentDocumentUrl } from "@/lib/social/deployment-link";
+import { SocialReviewModal, type SocialReviewApplyPatch } from "@/components/SocialReviewModal";
+import type { ReviewPlatform, SocialReviewSubmission } from "@/lib/social/review-types";
 
 type PlatformName = "telegram" | "twitter" | "instagram" | "bluesky" | "snapchat";
 type PostStatus = "draft" | "approved" | "scheduled" | "published" | "failed";
@@ -240,6 +242,12 @@ export function PostManager({
   const [mediaIds, setMediaIds] = useState<string[]>(
     initialMediaId ? [initialMediaId] : []
   );
+  const [platformScheduleOverrides, setPlatformScheduleOverrides] = useState<
+    Partial<Record<ReviewPlatform, string>>
+  >({});
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewSubmission, setReviewSubmission] =
+    useState<SocialReviewSubmission | null>(null);
 
   const eventMedia = useMemo(
     () =>
@@ -298,7 +306,7 @@ export function PostManager({
 
     if (!liveSelected.length) {
       errors.push(
-        "Choose at least one live provider before scheduling. Telegram, X, and Instagram are live in v25.2.",
+        "Choose at least one live provider before scheduling. Telegram, X, Instagram, and Bluesky are live.",
       );
     }
 
@@ -321,7 +329,7 @@ export function PostManager({
 
       if (selectedMedia.length > 10) {
         errors.push(
-          `Telegram accepts at most 10 media items in one v25.2 publishing job.`,
+          `Telegram accepts at most 10 media items in one publishing job.`,
         );
       }
 
@@ -337,7 +345,7 @@ export function PostManager({
       const xLimit = 280;
       if (xCaption.length > xLimit) {
         errors.push(
-          `X caption is ${xCaption.length} characters. v25.2 defaults to ${xLimit}; set X_MAX_POST_CHARS in Vercel only if the connected posting account supports a higher API limit.`,
+          `X caption is ${xCaption.length} characters. Dusk defaults to ${xLimit}; set X_MAX_POST_CHARS in Vercel only if the connected posting account supports a higher API limit.`,
         );
       }
       const xVideos = selectedMedia.filter((item) => item.kind === "video");
@@ -405,7 +413,7 @@ export function PostManager({
 
       if (selectedMedia.some((item) => item.kind === "video")) {
         errors.push(
-          "Bluesky video publishing is not enabled in v25.3. Use text and up to four images.",
+          "Bluesky video publishing is not enabled in this Dusk publisher. Use text and up to four images.",
         );
       }
     }
@@ -441,6 +449,136 @@ export function PostManager({
     return buckets;
   }, [posts]);
 
+  function reviewablePlatform(
+    platform: PlatformName,
+  ): platform is ReviewPlatform {
+    return ["telegram", "twitter", "instagram", "bluesky"].includes(
+      platform,
+    );
+  }
+
+  function effectivePlatformLocalSchedule(platform: ReviewPlatform) {
+    return platformScheduleOverrides[platform] || scheduledAt || "";
+  }
+
+  function composerReviewSubmission(): SocialReviewSubmission | null {
+    const reviewPlatforms = selectedPlatforms.filter(reviewablePlatform);
+
+    if (!title.trim() || !masterCaption.trim()) {
+      setStatusMessage(
+        "Give the post a title and master caption before asking Chaos to review it.",
+      );
+      return null;
+    }
+
+    if (!reviewPlatforms.length) {
+      setStatusMessage(
+        "Select at least one live platform before asking Chaos to review the post.",
+      );
+      return null;
+    }
+
+    return {
+      postId: editingId,
+      title: title.trim(),
+      masterCaption: masterCaption.trim(),
+      eventId: eventId || null,
+      includeDeploymentLink,
+      scheduledAt: scheduledAt ? toIso(scheduledAt) : null,
+      platforms: reviewPlatforms.map((platform) => ({
+        platform,
+        captionOverride: captionOverrides[platform]?.trim() || null,
+        scheduledAt: effectivePlatformLocalSchedule(platform)
+          ? toIso(effectivePlatformLocalSchedule(platform))
+          : null,
+      })),
+      mediaIds,
+    };
+  }
+
+  function postReviewSubmission(post: PostRow): SocialReviewSubmission | null {
+    const platforms = (post.post_platforms ?? [])
+      .filter((row) => reviewablePlatform(row.platform))
+      .map((row) => ({
+        platform: row.platform as ReviewPlatform,
+        captionOverride: row.platform_caption_override,
+        scheduledAt: row.scheduled_at,
+      }));
+
+    if (!platforms.length) {
+      setStatusMessage("This post has no live platform destinations to review.");
+      return null;
+    }
+
+    return {
+      postId: post.id,
+      title: post.title,
+      masterCaption: post.master_caption,
+      eventId: post.event_id,
+      includeDeploymentLink: Boolean(post.include_deployment_link),
+      scheduledAt: post.scheduled_at,
+      platforms,
+      mediaIds: [...(post.post_media ?? [])]
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((join) => join.media?.id)
+        .filter(Boolean) as string[],
+    };
+  }
+
+  function openComposerReview() {
+    const submission = composerReviewSubmission();
+    if (!submission) return;
+    setReviewSubmission(submission);
+    setReviewOpen(true);
+  }
+
+  function openPostReview(post: PostRow) {
+    const submission = postReviewSubmission(post);
+    if (!submission) return;
+    editPost(post);
+    setReviewSubmission(submission);
+    setReviewOpen(true);
+  }
+
+  function applyReviewPatch(patch: SocialReviewApplyPatch) {
+    if (typeof patch.masterCaption === "string") {
+      setMasterCaption(patch.masterCaption);
+    }
+
+    if (patch.platformCaption) {
+      setCaptionOverrides((current) => ({
+        ...current,
+        [patch.platformCaption!.platform]: patch.platformCaption!.caption,
+      }));
+    }
+
+    if (patch.mediaOrder?.length) {
+      setMediaIds((current) => {
+        const valid = patch.mediaOrder!.filter((id) => current.includes(id));
+        const leftovers = current.filter((id) => !valid.includes(id));
+        return [...valid, ...leftovers];
+      });
+    }
+
+    if (patch.platformSchedule) {
+      setPlatformScheduleOverrides((current) => ({
+        ...current,
+        [patch.platformSchedule!.platform]: toLocalInput(
+          patch.platformSchedule!.scheduledAt,
+        ),
+      }));
+      setPostStatus("scheduled");
+    }
+
+    if (typeof patch.includeDeploymentLink === "boolean" && eventId) {
+      setIncludeDeploymentLink(patch.includeDeploymentLink);
+    }
+
+    setStatusMessage(
+      "Chaos suggestion applied to the composer. Nothing has been published automatically.",
+    );
+  }
+
   async function refresh() {
     const response = await fetch("/api/admin/posts", { cache: "no-store" });
     const body = await response.json();
@@ -458,6 +596,7 @@ export function PostManager({
     setScheduledAt("");
     setSelectedPlatforms(["telegram"]);
     setCaptionOverrides({});
+    setPlatformScheduleOverrides({});
     setMediaIds([]);
   }
 
@@ -483,6 +622,19 @@ export function PostManager({
           platform.platform_caption_override ?? "",
         ])
       )
+    );
+    setPlatformScheduleOverrides(
+      Object.fromEntries(
+        (post.post_platforms ?? [])
+          .filter(
+            (platform) =>
+              reviewablePlatform(platform.platform) && platform.scheduled_at,
+          )
+          .map((platform) => [
+            platform.platform,
+            toLocalInput(platform.scheduled_at),
+          ]),
+      ),
     );
     setMediaIds(
       [...(post.post_media ?? [])]
@@ -538,9 +690,22 @@ export function PostManager({
     const scheduleIso =
       postStatus === "scheduled" ? toIso(scheduledAt) : null;
 
-    if (postStatus === "scheduled" && !scheduleIso) {
-      setStatusMessage("Choose a valid scheduled date/time.");
-      return;
+    if (postStatus === "scheduled") {
+      const missingSchedules = selectedPlatforms
+        .filter(reviewablePlatform)
+        .filter(
+          (platform) =>
+            !toIso(platformScheduleOverrides[platform] || scheduledAt),
+        );
+
+      if (missingSchedules.length) {
+        setStatusMessage(
+          `Choose a base schedule or platform-specific time for: ${missingSchedules
+            .map(platformLabel)
+            .join(", ")}.`,
+        );
+        return;
+      }
     }
 
     const payload = {
@@ -554,6 +719,10 @@ export function PostManager({
       platforms: selectedPlatforms.map((platform) => ({
         platform,
         captionOverride: captionOverrides[platform]?.trim() || null,
+        scheduledAt:
+          postStatus === "scheduled" && reviewablePlatform(platform)
+            ? toIso(platformScheduleOverrides[platform] || scheduledAt)
+            : null,
       })),
       mediaIds,
     };
@@ -671,7 +840,7 @@ export function PostManager({
               {editingId ? "Edit Publishing Plan" : "Compose Publishing Plan"}
             </h1>
             <p className="mt-3 max-w-3xl text-slate-400">
-              Draft here, approve deliberately, schedule intentionally. In v25.3
+              Draft here, review with Chaos, approve deliberately, schedule intentionally. In v26 Alpha 5
               Telegram, X, Instagram, and Bluesky are live. Scheduled
               live-provider jobs can leave Dusk Industries when the Make
               dispatcher runs; Snapchat is postponed.
@@ -947,6 +1116,35 @@ export function PostManager({
               </label>
             </div>
 
+            {postStatus === "scheduled" ? (
+              <details className="rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+                <summary className="cursor-pointer text-sm font-black text-dusk-aqua">
+                  Per-platform timing overrides
+                </summary>
+                <p className="mt-2 text-xs text-slate-500">
+                  Leave blank to use the base schedule. Chaos Social Review can fill these with a staggered schedule.
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  {selectedPlatforms.filter(reviewablePlatform).map((platform) => (
+                    <label className="form-label" key={`${platform}-schedule`}>
+                      {platformLabel(platform)}
+                      <input
+                        className="form-input"
+                        type="datetime-local"
+                        value={platformScheduleOverrides[platform] ?? ""}
+                        onChange={(event) =>
+                          setPlatformScheduleOverrides((current) => ({
+                            ...current,
+                            [platform]: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            ) : null}
+
             {postStatus === "scheduled" &&
             (scheduleIssues.errors.length || scheduleIssues.warnings.length) ? (
               <div className="space-y-2">
@@ -971,21 +1169,33 @@ export function PostManager({
 
             <div className="rounded-2xl border border-dusk-gold/20 bg-dusk-gold/5 p-4 text-sm text-slate-300">
               <strong>Safety rail:</strong> Draft and Approved records never
-              publish. In v25.3, Telegram, X, Instagram, and Bluesky can become
+              publish. In v26 Alpha 5, Telegram, X, Instagram, and Bluesky can become
               Scheduled and dispatchable. Snapchat remains staged/postponed.
             </div>
 
-            <button
-              className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
-              type="submit"
-              disabled={postStatus === "scheduled" && scheduleIssues.errors.length > 0}
-            >
-              {editingId
-                ? "Update publishing plan"
-                : postStatus === "scheduled"
-                  ? "Schedule live publishing"
-                  : "Save publishing plan"}
-            </button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                className="button-secondary w-full"
+                type="button"
+                onClick={openComposerReview}
+              >
+                ✨ Review with Chaos
+              </button>
+              <button
+                className="button-primary w-full disabled:cursor-not-allowed disabled:opacity-50"
+                type="submit"
+                disabled={
+                  postStatus === "scheduled" &&
+                  scheduleIssues.errors.length > 0
+                }
+              >
+                {editingId
+                  ? "Update publishing plan"
+                  : postStatus === "scheduled"
+                    ? "Schedule live publishing"
+                    : "Save publishing plan"}
+              </button>
+            </div>
 
             {statusMessage ? (
               <p className="text-sm text-slate-400">{statusMessage}</p>
@@ -1164,12 +1374,15 @@ export function PostManager({
                           </button>
                         ) : null}
 
-                        <a
-                          className="button-secondary"
-                          href={`/dashboard/posts?postId=${post.id}`}
-                        >
-                          Ask Chaos
-                        </a>
+                        {post.status !== "published" ? (
+                          <button
+                            className="button-secondary"
+                            type="button"
+                            onClick={() => openPostReview(post)}
+                          >
+                            ✨ Review
+                          </button>
+                        ) : null}
 
                         {post.status === "draft" ? (
                           <button
@@ -1235,6 +1448,13 @@ export function PostManager({
           ))}
         </div>
       </section>
+
+      <SocialReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        submission={reviewSubmission}
+        onApply={applyReviewPatch}
+      />
     </div>
   );
 }

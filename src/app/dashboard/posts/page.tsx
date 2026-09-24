@@ -1,6 +1,5 @@
 import { PostManager } from "@/components/PostManager";
 import { SocialProviderPanel } from "@/components/SocialProviderPanel";
-import { ChaosCopilot } from "@/components/ChaosCopilot";
 import { createAdminSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Social Ops · Dusk Dashboard" };
@@ -9,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPostsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ eventId?: string; mediaId?: string; postId?: string }>;
+  searchParams: Promise<{ eventId?: string; mediaId?: string }>;
 }) {
   const params = await searchParams;
   const supabase = createAdminSupabaseClient();
@@ -55,10 +54,6 @@ export default async function DashboardPostsPage({
 
   return (
     <div className="space-y-8">
-      <ChaosCopilot
-        contextType="social"
-        postId={params.postId ?? null}
-      />
       <SocialProviderPanel />
       <PostManager
         initialPosts={(posts ?? []) as never[]}

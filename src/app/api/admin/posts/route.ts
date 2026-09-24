@@ -18,6 +18,7 @@ const PlatformSchema = z.enum([
 const PlatformInputSchema = z.object({
   platform: PlatformSchema,
   captionOverride: z.string().max(10000).nullable().optional(),
+  scheduledAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
 const CreateSchema = z.object({
@@ -61,6 +62,38 @@ const DeleteSchema = z.object({ id: z.string().uuid() });
 
 async function authorized() {
   return await getDashboardUser();
+}
+
+function effectivePlatformSchedule(
+  platform: z.infer<typeof PlatformInputSchema>,
+  fallback: string | null | undefined,
+) {
+  return platform.scheduledAt ?? fallback ?? null;
+}
+
+function earliestLiveSchedule(
+  platforms: z.infer<typeof PlatformInputSchema>[],
+  fallback: string | null | undefined,
+) {
+  const times = platforms
+    .filter((item) => platformIsLive(item.platform))
+    .map((item) => effectivePlatformSchedule(item, fallback))
+    .filter(Boolean) as string[];
+
+  if (!times.length) return fallback ?? null;
+  return [...times].sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+  )[0];
+}
+
+function missingLiveSchedules(
+  platforms: z.infer<typeof PlatformInputSchema>[],
+  fallback: string | null | undefined,
+) {
+  return platforms
+    .filter((item) => platformIsLive(item.platform))
+    .filter((item) => !effectivePlatformSchedule(item, fallback))
+    .map((item) => item.platform);
 }
 
 async function deploymentSuffixForInput(
@@ -315,7 +348,9 @@ async function replacePlatforms(
       platform_caption_override: platform.captionOverride || null,
       status: platformStatus,
       scheduled_at:
-        status === "scheduled" && live ? scheduledAt : null,
+        status === "scheduled" && live
+          ? effectivePlatformSchedule(platform, scheduledAt)
+          : null,
       last_error: null,
     };
 
@@ -370,7 +405,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await authorized())) {
+  const user = await authorized();
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
@@ -408,11 +444,17 @@ export async function POST(request: Request) {
     }
   }
 
-  if (input.status === "scheduled" && !input.scheduledAt) {
-    return NextResponse.json(
-      { error: "A scheduled post needs a scheduled time." },
-      { status: 400 }
-    );
+  if (input.status === "scheduled") {
+    const missing = missingLiveSchedules(input.platforms, input.scheduledAt);
+    if (missing.length) {
+      return NextResponse.json(
+        {
+          error: "A scheduled post needs a time for every live platform.",
+          detail: `Missing schedule: ${missing.join(", ")}. Set a base time or platform override.`,
+        },
+        { status: 400 },
+      );
+    }
   }
 
   const supabase = createAdminSupabaseClient();
@@ -420,12 +462,16 @@ export async function POST(request: Request) {
   const { data: post, error } = await supabase
     .from("posts")
     .insert({
+      owner_user_id: user.id,
       event_id: input.eventId ?? null,
       include_deployment_link: input.includeDeploymentLink,
       title: input.title,
       master_caption: input.masterCaption,
       status: input.status,
-      scheduled_at: input.status === "scheduled" ? input.scheduledAt : null,
+      scheduled_at:
+        input.status === "scheduled"
+          ? earliestLiveSchedule(input.platforms, input.scheduledAt)
+          : null,
       approved_at:
         input.status === "approved" || input.status === "scheduled"
           ? new Date().toISOString()
@@ -707,15 +753,23 @@ export async function PATCH(request: Request) {
     }
   }
 
-  if (input.status === "scheduled" && !input.scheduledAt) {
-    return NextResponse.json(
-      { error: "A scheduled post needs a scheduled time." },
-      { status: 400 }
-    );
+  if (input.status === "scheduled") {
+    const missing = missingLiveSchedules(input.platforms, input.scheduledAt);
+    if (missing.length) {
+      return NextResponse.json(
+        {
+          error: "A scheduled post needs a time for every live platform.",
+          detail: `Missing schedule: ${missing.join(", ")}. Set a base time or platform override.`,
+        },
+        { status: 400 },
+      );
+    }
   }
 
   const scheduledAt =
-    input.status === "scheduled" ? input.scheduledAt ?? null : null;
+    input.status === "scheduled"
+      ? earliestLiveSchedule(input.platforms, input.scheduledAt)
+      : null;
 
   const { error } = await supabase
     .from("posts")
