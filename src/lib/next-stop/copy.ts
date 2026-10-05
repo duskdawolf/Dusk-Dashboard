@@ -10,7 +10,7 @@ const schema = {
     subheadline: { type: "string" },
     currentEventKicker: { type: "string" },
     findMeTitle: { type: "string" },
-    findMeItems: { type: "array", maxItems: 4, items: { type: "string" } },
+    findMeItems: { type: "array", maxItems: 5, items: { type: "string" } },
     flavorText: { type: "string" },
     pastLabel: { type: "string" },
     futureLabel: { type: "string" },
@@ -29,6 +29,39 @@ const schema = {
   ],
 } as const;
 
+function splitFindMeNotes(text: string | null | undefined) {
+  if (!text) return [];
+  return text
+    .replace(/\r/g, "")
+    .split(/\n|•|;|\|/g)
+    .map((part) => part.trim().replace(/^[-*]\s*/, ""))
+    .filter(Boolean);
+}
+
+function canonicalFindMeItems(route: RouteContext) {
+  const items: string[] = [];
+  if (route.current.appearanceMode) {
+    const label = route.current.appearanceMode.trim();
+    items.push(
+      /^look for/i.test(label)
+        ? label
+        : `Look for Dusk ${/^in\b/i.test(label.toLowerCase()) ? label : `in ${label}`}.`,
+    );
+  }
+
+  for (const note of splitFindMeNotes(route.current.findMeNotes)) {
+    items.push(note.endsWith(".") ? note : `${note}.`);
+  }
+
+  const deduped = Array.from(new Set(items.map((item) => item.trim()))).filter(Boolean);
+  if (deduped.length) return deduped.slice(0, 5);
+
+  return [
+    "No specific meetup details supplied yet.",
+    "Keep your whiskers tuned for updates!",
+  ];
+}
+
 export async function generateNextStopCopy(route: RouteContext): Promise<NextStopCopy> {
   const client = nextStopOpenAI();
   const response = await client.responses.create({
@@ -38,9 +71,9 @@ export async function generateNextStopCopy(route: RouteContext): Promise<NextSto
       {
         role: "system",
         content:
-          "Write very concise all-ages Dusk Induskries furry-event poster copy. " +
-          "Be playful and mischievous. Never invent a time, room, appearance, panel, hotel detail, or event fact. " +
-          "Use only supplied data. Exact event title/location/date are rendered separately by code.",
+          "Write concise all-ages Dusk Induskries event-poster copy. " +
+          "Be playful and mischievous. Never invent times, rooms, appearances, panel names, meetup logistics, or other event facts. " +
+          "Use supplied appearanceMode and findMeNotes directly for 'How to Find Dusk'.",
       },
       {
         role: "user",
@@ -79,6 +112,8 @@ export async function generateNextStopCopy(route: RouteContext): Promise<NextSto
   const base = JSON.parse(response.output_text);
   return {
     ...base,
+    findMeTitle: "How to Find Dusk",
+    findMeItems: canonicalFindMeItems(route),
     currentEventTitle: route.current.title,
     locationLine: formatLocation(route.current),
     dateLine: formatDateLine(route.current),

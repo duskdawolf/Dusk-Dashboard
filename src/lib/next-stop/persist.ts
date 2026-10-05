@@ -1,5 +1,10 @@
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
-import type { GeneratedAsset, NextStopCopy, RouteContext } from "./types";
+import type {
+  GeneratedAsset,
+  GeneratedBackgroundAsset,
+  NextStopCopy,
+  RouteContext,
+} from "./types";
 
 export async function persistNextStop(route: RouteContext, asset: GeneratedAsset) {
   const supabase = createAlpha7SupabaseAdmin();
@@ -18,7 +23,7 @@ export async function persistNextStop(route: RouteContext, asset: GeneratedAsset
       source_hash: asset.sourceHash,
       image_model: asset.imageModel,
       image_size: asset.imageSize,
-      metadata: { generator: "v26-alpha7-complete-1" },
+      metadata: { generator: "v26-alpha7.2-background-reuse" },
     });
   if (historyError) throw historyError;
 
@@ -30,6 +35,28 @@ export async function persistNextStop(route: RouteContext, asset: GeneratedAsset
       next_stop_generated_at: new Date().toISOString(),
       next_stop_copy: asset.copy,
       next_stop_source_hash: asset.sourceHash,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", route.current.id);
+  if (error) throw error;
+}
+
+export async function persistNextStopBackground(
+  route: RouteContext,
+  asset: GeneratedBackgroundAsset,
+) {
+  const supabase = createAlpha7SupabaseAdmin();
+  const { error } = await supabase
+    .from("events")
+    .update({
+      next_stop_background_asset_url: asset.backgroundUrl,
+      next_stop_background_asset_path: asset.backgroundPath,
+      next_stop_background_asset_status: "generated",
+      next_stop_background_generated_at: new Date().toISOString(),
+      next_stop_background_prompt: asset.prompt,
+      next_stop_background_image_model: asset.imageModel,
+      next_stop_copy: asset.copy,
+      next_stop_asset_status: "stale",
       updated_at: new Date().toISOString(),
     })
     .eq("id", route.current.id);

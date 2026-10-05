@@ -1,0 +1,41 @@
+{
+  "name": "dusk-industries",
+  "version": "26.0.0-alpha.5",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "stripe": "latest",
+    "zod": "latest",
+    "d3-geo": "latest",
+    "topojson-client": "latest",
+    "us-atlas": "latest",
+    "luxon": "latest",
+    "web-push": "latest",
+    "openai": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "autoprefixer": "latest",
+    "postcss": "latest",
+    "tailwindcss": "^3.4.17",
+    "typescript": "latest",
+    "@types/d3-geo": "latest",
+    "@types/topojson-client": "latest",
+    "@types/luxon": "latest",
+    "@types/web-push": "latest"
+  }
+}

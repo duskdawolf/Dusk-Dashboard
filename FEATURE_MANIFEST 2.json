@@ -1,0 +1,20 @@
+{
+  "name": "Dusk Induskries v26 Alpha 7 — Next Stop Generator",
+  "generated": "2026-10-01",
+  "image_output": {
+    "size": "1152x2048",
+    "aspect_ratio": "9:16",
+    "format": "webp",
+    "default_model": "gpt-image-2.5-flare"
+  },
+  "features": [
+    "two previous + current + two next route selection",
+    "structured branded copy generation",
+    "AI themed background generation",
+    "deterministic SVG text and paw overlay",
+    "Supabase Storage asset history",
+    "stale fingerprint detection",
+    "dashboard generator card",
+    "public Next Stop hero component"
+  ]
+}
