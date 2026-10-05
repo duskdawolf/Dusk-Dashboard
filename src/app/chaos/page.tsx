@@ -1,17 +1,43 @@
 import { ChaosArchiveCard } from "@/components/ChaosArchiveCard";
+import Link from "next/link";
 import { getChaosArchive } from "@/lib/repository";
 
 export const metadata = { title: "Case Studies in Chaos" };
 export const dynamic = "force-dynamic";
 
-export default async function ChaosPage() {
+export default async function ChaosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tag?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const rawTag = Array.isArray(params.tag) ? params.tag[0] : params.tag;
+  const activeTag = rawTag?.trim() ?? "";
+
   const archive = await getChaosArchive();
 
-  const completed = archive.filter(
+  const filteredArchive = activeTag
+    ? archive.filter((item) => {
+        const needle = activeTag.toLowerCase();
+
+        return [
+          item.event.tag,
+          item.event.eventType,
+          item.event.quarter.toUpperCase(),
+        ].some(
+          (value) =>
+            String(value ?? "")
+              .trim()
+              .toLowerCase() === needle,
+        );
+      })
+    : archive;
+
+  const completed = filteredArchive.filter(
     (item) =>
       new Date(item.event.endAt ?? item.event.startAt).getTime() < Date.now(),
   );
-  const upcoming = archive.filter(
+  const upcoming = filteredArchive.filter(
     (item) =>
       new Date(item.event.endAt ?? item.event.startAt).getTime() >= Date.now(),
   );
@@ -28,11 +54,40 @@ export default async function ChaosPage() {
         themselves to the same event record as evidence accumulates.
       </p>
 
-      <div className="mt-7 flex flex-wrap gap-3">
-        <span className="tag !mt-0">{archive.length} total deployments</span>
+      <div className="mt-7 flex flex-wrap items-center gap-3">
+        <span className="tag !mt-0">
+          {activeTag
+            ? `${filteredArchive.length} matching ${activeTag}`
+            : `${archive.length} total deployments`}
+        </span>
         <span className="tag !mt-0">{completed.length} completed</span>
         <span className="tag !mt-0">{upcoming.length} future chaos</span>
+
+        {activeTag ? (
+          <Link
+            href="/chaos"
+            className="rounded-full border border-dusk-aqua/20 bg-dusk-aqua/5 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-dusk-aqua transition hover:bg-dusk-aqua/10"
+          >
+            Clear filter ×
+          </Link>
+        ) : null}
       </div>
+
+      {activeTag && filteredArchive.length === 0 ? (
+        <section className="panel mt-10">
+          <div className="eyebrow">Evidence search</div>
+          <h2 className="text-2xl font-black">
+            No incident reports match “{activeTag}”.
+          </h2>
+          <p className="mt-3 text-slate-400">
+            Try another incident-report tag or clear the filter to reopen the
+            entire corporate evidence locker.
+          </p>
+          <Link href="/chaos" className="button-secondary mt-5 inline-flex">
+            CLEAR FILTER →
+          </Link>
+        </section>
+      ) : null}
 
       {upcoming.length ? (
         <section className="mt-12">

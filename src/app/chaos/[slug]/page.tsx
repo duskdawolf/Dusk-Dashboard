@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChaosFilterLink } from "@/components/ChaosFilterLink";
 import { notFound } from "next/navigation";
 import { getIncidentReport } from "@/lib/incident-report";
 
@@ -109,9 +110,9 @@ export default async function IncidentReportPage({
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <span className="tag !mt-0">{event.tag}</span>
-            <span className="tag !mt-0">{event.eventType}</span>
-            <span className="tag !mt-0">{event.quarter.toUpperCase()}</span>
+            <ChaosFilterLink value={event.tag} />
+            <ChaosFilterLink value={event.eventType} />
+            <ChaosFilterLink value={event.quarter.toUpperCase()} />
           </div>
         </div>
 
