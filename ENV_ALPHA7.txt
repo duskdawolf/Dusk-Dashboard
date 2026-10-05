@@ -1,0 +1,16 @@
+# Existing v26 settings remain unchanged.
+OPENAI_API_KEY=
+OPENAI_COPILOT_MODEL=gpt-5.6-luna
+
+# New optional overrides for Next Stop Generator:
+OPENAI_NEXT_STOP_COPY_MODEL=
+OPENAI_NEXT_STOP_IMAGE_MODEL=gpt-image-2.5-flare
+OPENAI_NEXT_STOP_IMAGE_QUALITY=medium
+
+# Existing Supabase settings expected by this feature:
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+
+# Existing admin allow-list:
+DUSK_ADMIN_EMAILS=
