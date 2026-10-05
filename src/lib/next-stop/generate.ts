@@ -1,18 +1,21 @@
-import { randomUUID } from "node:crypto";
-import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
-import { generateNextStopCopy } from "./copy";
-import { composeNextStopPoster } from "./compose";
-import { buildSourceHash } from "./hash";
-import { nextStopImageModel, nextStopOpenAI } from "./openai";
-import { buildBackgroundPrompt, NEXT_STOP_IMAGE_SIZE } from "./prompt";
-import type { GeneratedAsset, NextStopCopy, RouteContext } from "./types";
+import { randomUUID } from 'node:crypto';
+import { createAlpha7SupabaseAdmin } from '@/lib/alpha7/supabase-admin';
+import { getBrandConfig } from '@/lib/alpha71/brand-assets';
+import { generateNextStopCopy } from './copy';
+import { composeNextStopPoster } from './compose';
+import { buildSourceHash } from './hash';
+import { nextStopImageModel, nextStopOpenAI } from './openai';
+import { buildBackgroundPrompt, NEXT_STOP_IMAGE_SIZE } from './prompt';
+import type { GeneratedAsset, NextStopCopy, RouteContext } from './types';
 
 export async function generateNextStopAsset(
   route: RouteContext,
   existingCopy?: NextStopCopy | null,
+  userId?: string | null,
 ): Promise<GeneratedAsset> {
   const copy = existingCopy ?? await generateNextStopCopy(route);
-  const prompt = buildBackgroundPrompt(route, copy);
+  const brandConfig = userId ? await getBrandConfig(userId) : null;
+  const prompt = buildBackgroundPrompt(route, copy, brandConfig);
   const client = nextStopOpenAI();
   const model = nextStopImageModel();
 
@@ -20,33 +23,32 @@ export async function generateNextStopAsset(
     model,
     prompt,
     size: NEXT_STOP_IMAGE_SIZE,
-    quality: (process.env.OPENAI_NEXT_STOP_IMAGE_QUALITY as "low"|"medium"|"high"|"auto"|undefined) ?? "medium",
-    output_format: "webp",
+    quality: (process.env.OPENAI_NEXT_STOP_IMAGE_QUALITY as 'low'|'medium'|'high'|'auto'|undefined) ?? 'medium',
+    output_format: 'webp',
     output_compression: 88,
     n: 1,
   });
 
   const encoded = result.data?.[0]?.b64_json;
-  if (!encoded) throw new Error("Image generation returned no image data.");
+  if (!encoded) throw new Error('Image generation returned no image data.');
 
   const poster = await composeNextStopPoster({
-    background: Buffer.from(encoded, "base64"),
+    background: Buffer.from(encoded, 'base64'),
     route,
     copy,
+    brandConfig,
   });
 
   const supabase = createAlpha7SupabaseAdmin();
   const imagePath = `${route.current.id}/${Date.now()}-${randomUUID()}.webp`;
-  const { error } = await supabase.storage
-    .from("next-stop-assets")
-    .upload(imagePath, poster, {
-      contentType: "image/webp",
-      cacheControl: "31536000",
-      upsert: false,
-    });
+  const { error } = await supabase.storage.from('next-stop-assets').upload(imagePath, poster, {
+    contentType: 'image/webp',
+    cacheControl: '31536000',
+    upsert: false,
+  });
   if (error) throw error;
 
-  const { data } = supabase.storage.from("next-stop-assets").getPublicUrl(imagePath);
+  const { data } = supabase.storage.from('next-stop-assets').getPublicUrl(imagePath);
   return {
     imageUrl: data.publicUrl,
     imagePath,
