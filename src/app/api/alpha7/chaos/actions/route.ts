@@ -7,7 +7,10 @@ export async function GET(request: NextRequest) {
     const user = await requireAlpha7Admin();
     const conPrepId = request.nextUrl.searchParams.get("conPrepId");
     if (!conPrepId) {
-      return NextResponse.json({ error: "conPrepId is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "conPrepId is required" },
+        { status: 400 },
+      );
     }
 
     const supabase = createAlpha7SupabaseAdmin();
@@ -21,6 +24,8 @@ export async function GET(request: NextRequest) {
         "upsert_travel",
         "upsert_registration",
         "upsert_cost",
+        "upsert_packing_item",
+        "upsert_prep_task",
         "update_event",
         "update_con_prep",
       ])

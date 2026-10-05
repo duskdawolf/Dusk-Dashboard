@@ -5,6 +5,8 @@ export const ALPHA7_ACTION_TYPES = [
   "upsert_travel",
   "upsert_registration",
   "upsert_cost",
+  "upsert_packing_item",
+  "upsert_prep_task",
   "update_event",
   "update_con_prep",
 ] as const;
@@ -60,6 +62,32 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "source",
     "external_key",
     "cost_status",
+  ]),
+  upsert_packing_item: new Set([
+    "category",
+    "label",
+    "quantity",
+    "packed",
+    "sort_order",
+    "notes",
+    "parent_item_id",
+    "source",
+    "required",
+  ]),
+  upsert_prep_task: new Set([
+    "title",
+    "task_type",
+    "due_at",
+    "duration_minutes",
+    "status",
+    "notes",
+    "scheduled_start_at",
+    "scheduled_end_at",
+    "relative_days_before_departure",
+    "parent_task_id",
+    "sort_order",
+    "source",
+    "required",
   ]),
   update_event: new Set([
     "title",
@@ -143,7 +171,9 @@ export async function executeAlpha7RecordAction(args: {
   }
 
   if (args.actionType === "update_con_prep") {
-    if (!args.conPrepId) throw new Error("This action has no deployment context.");
+    if (!args.conPrepId) {
+      throw new Error("This action has no deployment context.");
+    }
     const { data, error } = await supabase
       .from("con_preps")
       .update({ ...changes, updated_at: new Date().toISOString() })
@@ -158,70 +188,47 @@ export async function executeAlpha7RecordAction(args: {
     throw new Error("This record action has no deployment context.");
   }
 
-  if (args.actionType === "upsert_hotel") {
-    if (recordId) {
-      const { data, error } = await supabase
-        .from("hotel_stays")
-        .update(changes)
-        .eq("id", recordId)
-        .eq("con_prep_id", args.conPrepId)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return { table: "hotel_stays", row: data };
-    }
-    const { data, error } = await supabase
-      .from("hotel_stays")
-      .insert({ con_prep_id: args.conPrepId, ...changes })
-      .select("*")
-      .single();
-    if (error) throw error;
-    return { table: "hotel_stays", row: data };
-  }
+  const specs: Partial<
+    Record<
+      Alpha7ActionType,
+      { table: string; defaults?: Record<string, unknown> }
+    >
+  > = {
+    upsert_hotel: {
+      table: "hotel_stays",
+      defaults: { currency: "USD" },
+    },
+    upsert_travel: {
+      table: "travel_segments",
+      defaults: { kind: "other", currency: "USD" },
+    },
+    upsert_registration: {
+      table: "con_registrations",
+      defaults: { status: "needed" },
+    },
+    upsert_packing_item: {
+      table: "packing_items",
+      defaults: {
+        category: "general",
+        quantity: 1,
+        packed: false,
+        sort_order: 0,
+        source: "manual",
+        required: false,
+      },
+    },
+    upsert_prep_task: {
+      table: "prep_tasks",
+      defaults: {
+        task_type: "prep",
+        status: "todo",
+        sort_order: 0,
+        source: "manual",
+        required: false,
+      },
+    },
+  };
 
-  if (args.actionType === "upsert_travel") {
-    if (recordId) {
-      const { data, error } = await supabase
-        .from("travel_segments")
-        .update(changes)
-        .eq("id", recordId)
-        .eq("con_prep_id", args.conPrepId)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return { table: "travel_segments", row: data };
-    }
-    const { data, error } = await supabase
-      .from("travel_segments")
-      .insert({ con_prep_id: args.conPrepId, ...changes })
-      .select("*")
-      .single();
-    if (error) throw error;
-    return { table: "travel_segments", row: data };
-  }
-
-  if (args.actionType === "upsert_registration") {
-    if (recordId) {
-      const { data, error } = await supabase
-        .from("con_registrations")
-        .update({ ...changes, updated_at: new Date().toISOString() })
-        .eq("id", recordId)
-        .eq("con_prep_id", args.conPrepId)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return { table: "con_registrations", row: data };
-    }
-    const { data, error } = await supabase
-      .from("con_registrations")
-      .insert({ con_prep_id: args.conPrepId, ...changes })
-      .select("*")
-      .single();
-    if (error) throw error;
-    return { table: "con_registrations", row: data };
-  }
-
-  // Costs may be edited if a record id is known; otherwise create a new line.
   if (args.actionType === "upsert_cost") {
     if (recordId) {
       const { data, error } = await supabase
@@ -241,6 +248,8 @@ export async function executeAlpha7RecordAction(args: {
         con_prep_id: args.conPrepId,
         event_id: args.eventId,
         owner_user_id: args.userId,
+        currency: "USD",
+        cost_status: "planned",
         ...changes,
         source: "manual",
       })
@@ -250,5 +259,31 @@ export async function executeAlpha7RecordAction(args: {
     return { table: "cost_entries", row: data };
   }
 
-  throw new Error(`Unsupported action: ${args.actionType}`);
+  const spec = specs[args.actionType];
+  if (!spec) throw new Error(`Unsupported action: ${args.actionType}`);
+
+  if (recordId) {
+    const { data, error } = await supabase
+      .from(spec.table)
+      .update(changes)
+      .eq("id", recordId)
+      .eq("con_prep_id", args.conPrepId)
+      .select("*")
+      .single();
+    if (error) throw error;
+    return { table: spec.table, row: data };
+  }
+
+  const { data, error } = await supabase
+    .from(spec.table)
+    .insert({
+      ...(spec.defaults ?? {}),
+      con_prep_id: args.conPrepId,
+      ...changes,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return { table: spec.table, row: data };
 }

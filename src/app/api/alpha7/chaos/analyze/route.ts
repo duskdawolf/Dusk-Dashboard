@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { requireAlpha7Admin, alpha7ErrorResponse } from "@/lib/alpha7/auth";
+import {
+  requireAlpha7Admin,
+  alpha7ErrorResponse,
+} from "@/lib/alpha7/auth";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
 import {
   getAlpha7DeploymentContext,
@@ -17,7 +20,7 @@ const proposalSchema = {
     summary: { type: "string" },
     proposals: {
       type: "array",
-      maxItems: 10,
+      maxItems: 12,
       items: {
         type: "object",
         additionalProperties: false,
@@ -29,6 +32,8 @@ const proposalSchema = {
               "upsert_travel",
               "upsert_registration",
               "upsert_cost",
+              "upsert_packing_item",
+              "upsert_prep_task",
               "update_event",
               "update_con_prep",
             ],
@@ -72,18 +77,27 @@ export async function POST(request: NextRequest) {
     const conPrepId = String(form.get("conPrepId") ?? "");
     const instruction = String(form.get("instruction") ?? "").trim();
     const maybeFile = form.get("image");
-    const file = maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
+    const file =
+      maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
 
     if (!conPrepId) {
-      return NextResponse.json({ error: "Choose a deployment first." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Choose a deployment first." },
+        { status: 400 },
+      );
     }
+
     if (!instruction && !file) {
       return NextResponse.json(
         { error: "Enter an instruction or attach an image." },
         { status: 400 },
       );
     }
-    if (file && (!mimeAllowed(file.type) || file.size > MAX_IMAGE_BYTES)) {
+
+    if (
+      file &&
+      (!mimeAllowed(file.type) || file.size > MAX_IMAGE_BYTES)
+    ) {
       return NextResponse.json(
         { error: "Use a JPG/PNG/WebP/HEIC image up to 4 MB." },
         { status: 400 },
@@ -106,9 +120,14 @@ export async function POST(request: NextRequest) {
     if (file) {
       const bytes = Buffer.from(await file.arrayBuffer());
       const extension =
-        file.name.split(".").pop()?.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() ||
-        "img";
-      const storagePath = `${user.id}/${conPrepId}/${Date.now()}-${randomUUID()}.${extension}`;
+        file.name
+          .split(".")
+          .pop()
+          ?.replace(/[^a-zA-Z0-9]/g, "")
+          .toLowerCase() || "img";
+
+      const storagePath =
+        `${user.id}/${conPrepId}/${Date.now()}-${randomUUID()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("copilot-attachments")
@@ -117,6 +136,7 @@ export async function POST(request: NextRequest) {
           cacheControl: "3600",
           upsert: false,
         });
+
       if (uploadError) throw uploadError;
 
       const { data: attachment, error: attachmentError } = await supabase
@@ -130,21 +150,43 @@ export async function POST(request: NextRequest) {
           storage_path: storagePath,
           mime_type: file.type,
           size_bytes: file.size,
-          metadata: { source: "alpha7_record_editor" },
+          metadata: { source: "alpha8_workspace" },
         })
         .select("*")
         .single();
+
       if (attachmentError) throw attachmentError;
+
       attachmentId = attachment.id;
-      imageDataUrl = `data:${file.type};base64,${bytes.toString("base64")}`;
+      imageDataUrl =
+        `data:${file.type};base64,${bytes.toString("base64")}`;
     }
 
-    const { data: history } = await supabase
-      .from("copilot_messages")
-      .select("role,content,created_at")
-      .eq("thread_id", thread.id)
-      .order("created_at", { ascending: false })
-      .limit(4);
+    const [
+      historyRes,
+      packingRes,
+      tasksRes,
+    ] = await Promise.all([
+      supabase
+        .from("copilot_messages")
+        .select("role,content,created_at")
+        .eq("thread_id", thread.id)
+        .order("created_at", { ascending: false })
+        .limit(4),
+      supabase
+        .from("packing_items")
+        .select("*")
+        .eq("con_prep_id", conPrepId)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("prep_tasks")
+        .select("*")
+        .eq("con_prep_id", conPrepId)
+        .order("sort_order", { ascending: true }),
+    ]);
+
+    if (packingRes.error) throw packingRes.error;
+    if (tasksRes.error) throw tasksRes.error;
 
     const currentData = {
       event: context.event,
@@ -153,21 +195,29 @@ export async function POST(request: NextRequest) {
       travelSegments: context.travelSegments,
       registrations: context.registrations,
       costs: context.costs,
+      packingItems: packingRes.data ?? [],
+      prepTasks: tasksRes.data ?? [],
     };
 
     const userText = [
-      instruction || "Extract useful deployment information from the attached image.",
+      instruction ||
+        "Extract useful deployment information from the attached image.",
       "",
       "CURRENT DATABASE RECORDS:",
       JSON.stringify(currentData, null, 2),
       "",
       "RECENT CHAOS THREAD CONTEXT:",
-      JSON.stringify((history ?? []).reverse(), null, 2),
+      JSON.stringify(
+        (historyRes.data ?? []).reverse(),
+        null,
+        2,
+      ),
     ].join("\n");
 
     const content: Array<Record<string, unknown>> = [
       { type: "input_text", text: userText },
     ];
+
     if (imageDataUrl) {
       content.push({
         type: "input_image",
@@ -176,7 +226,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const model =
       process.env.OPENAI_COPILOT_VISION_MODEL ??
       process.env.OPENAI_COPILOT_MODEL ??
@@ -191,17 +244,19 @@ export async function POST(request: NextRequest) {
           content:
             "You are Chaos Copilot inside Dusk Induskries Convention Ops. " +
             "You may propose typed database updates but NEVER silently write them. " +
-            "Use only information the user supplied, visible in the attachment, or already present in CURRENT DATABASE RECORDS. " +
-            "Do not invent confirmation numbers, prices, dates, hotel details, travel details, registration state, or event facts. " +
-            "If an existing row matches, set record_id to its exact id. " +
-            "If a genuinely new row is needed, record_id must be null. " +
-            "Money fields named *_cents must be integer cents. " +
-            "Use ISO-8601 timestamps when a time/date is sufficiently known. " +
-            "Only propose fields that actually need changing. " +
-            "Respect these database enums exactly: con-prep status = planning|ready|traveling|complete; " +
-            "registration status = needed|ordered|paid|confirmed; cost_status = estimated|planned|paid|reimbursed; " +
-            "travel kind = flight|train|bus|car|rideshare|other; direction = outbound|return|local|other; " +
-            "car_mode = self_drive|carpool_driver|carpool_passenger.",
+            "Use only information the user supplied, visible in an attachment, or already present in CURRENT DATABASE RECORDS. " +
+            "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, event details, and deployment/readiness details. " +
+            "If an existing row matches, set record_id to its exact id. If a genuinely new row is needed, record_id must be null. " +
+            "Never invent confirmation numbers, prices, dates, locations, hotel details, travel details, schedule details, packing facts, or task facts. " +
+            "Money fields named *_cents must be integer cents. Use ISO-8601 timestamps when a date/time is sufficiently known. " +
+            "Respect these enums: con-prep status = planning|ready|traveling|complete; " +
+            "registration status = needed|ordered|paid|confirmed; " +
+            "cost_status = estimated|planned|paid|reimbursed; " +
+            "travel kind = flight|train|bus|car|rideshare|other; " +
+            "travel direction = outbound|return|local|other; " +
+            "car_mode = self_drive|carpool_driver|carpool_passenger; " +
+            "prep task status should normally be todo|in_progress|done|cancelled. " +
+            "Only propose fields that actually need changing.",
         },
         {
           role: "user",
@@ -232,8 +287,12 @@ export async function POST(request: NextRequest) {
     await supabase.from("copilot_messages").insert({
       thread_id: thread.id,
       role: "user",
-      content: instruction || `Analyze attachment: ${file?.name ?? "image"}`,
-      metadata: attachmentId ? { attachment_id: attachmentId } : {},
+      content:
+        instruction ||
+        `Analyze attachment: ${file?.name ?? "image"}`,
+      metadata: attachmentId
+        ? { attachment_id: attachmentId }
+        : {},
     });
 
     await supabase.from("copilot_messages").insert({
@@ -241,7 +300,7 @@ export async function POST(request: NextRequest) {
       role: "assistant",
       content: parsed.summary,
       metadata: {
-        alpha7_record_editor: true,
+        alpha8_workspace: true,
         attachment_id: attachmentId,
         model,
       },
@@ -267,17 +326,19 @@ export async function POST(request: NextRequest) {
     }));
 
     let insertedActions: unknown[] = [];
+
     if (actionRows.length) {
       const { data, error } = await supabase
         .from("copilot_actions")
         .insert(actionRows)
         .select("*");
+
       if (error) throw error;
       insertedActions = data ?? [];
     }
 
     if (attachmentId) {
-      await supabase
+      const { error: attachmentUpdateError } = await supabase
         .from("copilot_attachments")
         .update({
           extracted_json: parsed,
@@ -285,6 +346,13 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", attachmentId)
         .eq("user_id", user.id);
+
+      if (attachmentUpdateError) {
+        console.error(
+          "[alpha8 chaos analyze] attachment metadata update failed",
+          attachmentUpdateError,
+        );
+      }
     }
 
     return NextResponse.json({
@@ -295,8 +363,11 @@ export async function POST(request: NextRequest) {
       threadId: thread.id,
     });
   } catch (error) {
-    console.error("[alpha7 chaos analyze]", error);
+    console.error("[alpha8 chaos analyze]", error);
     const out = alpha7ErrorResponse(error);
-    return NextResponse.json({ error: out.message }, { status: out.status });
+    return NextResponse.json(
+      { error: out.message },
+      { status: out.status },
+    );
   }
 }
