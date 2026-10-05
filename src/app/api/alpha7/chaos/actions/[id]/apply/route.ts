@@ -72,14 +72,17 @@ export async function POST(
   } catch (error) {
     console.error("[alpha7 action apply]", error);
     if (actionId) {
-      await supabase
+      const { error: failureUpdateError } = await supabase
         .from("copilot_actions")
         .update({
           status: "failed",
           error_message: error instanceof Error ? error.message : "Unknown error",
         })
-        .eq("id", actionId)
-        .catch(() => {});
+        .eq("id", actionId);
+
+      if (failureUpdateError) {
+        console.error("[alpha7 action apply] could not mark action failed", failureUpdateError);
+      }
     }
     const out = alpha7ErrorResponse(error);
     return NextResponse.json({ error: out.message }, { status: out.status });
