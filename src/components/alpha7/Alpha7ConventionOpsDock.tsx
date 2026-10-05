@@ -11,6 +11,7 @@ type PrepOption = {
     id: string;
     title: string;
     start_at: string;
+    end_at?: string | null;
     location: string | null;
   } | null;
 };
@@ -27,6 +28,47 @@ type Action = {
   status: string;
   created_at: string;
 };
+
+function eventTime(value?: string | null) {
+  if (!value) return Number.NaN;
+  return new Date(value).valueOf();
+}
+
+function sortDeployments(items: PrepOption[]) {
+  const now = Date.now();
+
+  return [...items].sort((a, b) => {
+    const aStart = eventTime(a.event?.start_at);
+    const bStart = eventTime(b.event?.start_at);
+    const aEnd = eventTime(a.event?.end_at) || aStart;
+    const bEnd = eventTime(b.event?.end_at) || bStart;
+
+    const aActive =
+      Number.isFinite(aStart) &&
+      aStart <= now &&
+      Number.isFinite(aEnd) &&
+      aEnd >= now;
+    const bActive =
+      Number.isFinite(bStart) &&
+      bStart <= now &&
+      Number.isFinite(bEnd) &&
+      bEnd >= now;
+
+    if (aActive !== bActive) return aActive ? -1 : 1;
+
+    const aFuture = Number.isFinite(aStart) && aStart > now;
+    const bFuture = Number.isFinite(bStart) && bStart > now;
+
+    if (aFuture !== bFuture) return aFuture ? -1 : 1;
+    if (aFuture && bFuture) return aStart - bStart;
+
+    if (Number.isFinite(aStart) && Number.isFinite(bStart)) {
+      return bStart - aStart;
+    }
+
+    return 0;
+  });
+}
 
 export function Alpha7ConventionOpsDock() {
   const [options, setOptions] = useState<PrepOption[]>([]);
@@ -48,8 +90,14 @@ export function Alpha7ConventionOpsDock() {
     const res = await fetch("/api/alpha7/con-preps", { cache: "no-store" });
     const json = await res.json();
     if (!res.ok) throw new Error(json.error ?? "Could not load deployments");
-    setOptions(json.items ?? []);
-    setSelected((old) => old || json.items?.[0]?.id || "");
+
+    const sorted = sortDeployments(json.items ?? []);
+    setOptions(sorted);
+
+    setSelected((old) => {
+      if (old && sorted.some((item) => item.id === old)) return old;
+      return sorted[0]?.id ?? "";
+    });
   }, []);
 
   const loadActions = useCallback(async () => {
@@ -95,8 +143,12 @@ export function Alpha7ConventionOpsDock() {
       setSummary(json.summary ?? "");
       setInstruction("");
       setFile(null);
-      const input = document.getElementById("alpha7-image") as HTMLInputElement | null;
+
+      const input = document.getElementById(
+        "alpha7-image",
+      ) as HTMLInputElement | null;
       if (input) input.value = "";
+
       await loadActions();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chaos analysis failed");
@@ -108,6 +160,7 @@ export function Alpha7ConventionOpsDock() {
   async function apply(id: string) {
     setApplyBusy(id);
     setError("");
+
     try {
       const res = await fetch(`/api/alpha7/chaos/actions/${id}/apply`, {
         method: "POST",
@@ -125,19 +178,17 @@ export function Alpha7ConventionOpsDock() {
   return (
     <div className="mb-6 grid gap-5">
       <section className="rounded-3xl border border-cyan-300/20 bg-gradient-to-br from-cyan-300/5 via-violet-400/5 to-pink-400/5 p-5 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">
-              v26 Alpha 7
-            </div>
-            <h2 className="mt-1 text-2xl font-black text-white">
-              Chaos Copilot — Record Editor
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400">
-              Tell Chaos what to change or attach a hotel / travel / registration screenshot.
-              Chaos extracts the facts, creates reviewable typed actions, and changes nothing until you press Apply.
-            </p>
+        <div>
+          <div className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">
+            v26 Alpha 7
           </div>
+          <h2 className="mt-1 text-2xl font-black text-white">
+            Chaos Copilot — Record Editor
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm text-slate-400">
+            Tell Chaos what to change or attach a hotel / travel / registration
+            screenshot. Changes remain proposals until you press Apply.
+          </p>
         </div>
 
         <div className="mt-5">
@@ -149,8 +200,9 @@ export function Alpha7ConventionOpsDock() {
             onChange={(e) => setSelected(e.target.value)}
             className="mt-2 w-full rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
           >
-            {options.map((option) => (
+            {options.map((option, index) => (
               <option key={option.id} value={option.id}>
+                {index === 0 ? "NEXT — " : ""}
                 {option.event?.title ?? "Untitled deployment"} — {option.status}
               </option>
             ))}
@@ -207,7 +259,9 @@ export function Alpha7ConventionOpsDock() {
                 </div>
                 <h3 className="mt-1 font-black text-white">{action.title}</h3>
                 {action.explanation ? (
-                  <p className="mt-1 text-sm text-slate-400">{action.explanation}</p>
+                  <p className="mt-1 text-sm text-slate-400">
+                    {action.explanation}
+                  </p>
                 ) : null}
                 <pre className="mt-3 overflow-x-auto rounded-xl bg-black/30 p-3 text-xs text-cyan-100">
                   {JSON.stringify(action.payload?.changes ?? {}, null, 2)}
@@ -218,7 +272,9 @@ export function Alpha7ConventionOpsDock() {
                   disabled={Boolean(applyBusy)}
                   className="mt-3 rounded-xl bg-pink-400 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
                 >
-                  {applyBusy === action.id ? "Applying…" : "Apply This Change"}
+                  {applyBusy === action.id
+                    ? "Applying…"
+                    : "Apply This Change"}
                 </button>
               </article>
             ))}
