@@ -1,6 +1,6 @@
 import React from 'react';
 import { ImageResponse } from 'next/og';
-import sharp from 'sharp';
+import sharp, { type OverlayOptions } from 'sharp';
 import { formatLocation } from './format';
 import type { NextStopCopy, RouteContext } from './types';
 import type { BrandConfig } from '@/lib/alpha71/types';
@@ -92,7 +92,7 @@ export async function composeNextStopPoster(args: {
   let image = sharp(png);
 
   if (brandConfig?.settings?.use_brand_assets_in_next_stop) {
-    const composites: sharp.OverlayOptions[] = [];
+    const composites: OverlayOptions[] = [];
 
     if (brandConfig.settings.composite_mascot && brandConfig.primaryMascot) {
       const mascot = await downloadBrandAssetBuffer(brandConfig.primaryMascot.storage_path);
