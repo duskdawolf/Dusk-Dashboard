@@ -154,6 +154,7 @@ export function Alpha8WorkspaceEditor(props: Props) {
             event_theme: String(data.get("event_theme") ?? "").trim() || null,
             appearance_mode:
               String(data.get("appearance_mode") ?? "").trim() || null,
+            suiting_mode: String(data.get("suiting_mode") ?? "not_suiting"),
             find_me_notes:
               String(data.get("find_me_notes") ?? "").trim() || null,
             description:
@@ -255,9 +256,8 @@ export function Alpha8WorkspaceEditor(props: Props) {
               String(data.get("description") ?? "").trim() || null,
             amount_cents: cents(data.get("amount")),
             currency: "USD",
-            incurred_at: isoOrNull(data.get("incurred_at")),
             source: "manual",
-            cost_status: String(data.get("cost_status") ?? "planned"),
+            cost_status: String(data.get("cost_status") ?? "budgeted"),
           };
           break;
       }
@@ -345,7 +345,12 @@ export function Alpha8WorkspaceEditor(props: Props) {
               <Field label="Tag" name="tag" defaultValue={record.tag ?? "Convention"} />
             </div>
             <Field label="Event theme" name="event_theme" defaultValue={record.event_theme} />
-            <Field label="Appearance mode" name="appearance_mode" defaultValue={record.appearance_mode} placeholder="Fullsuit + panel host + nightlife" />
+            <Select label="Suiting?" name="suiting_mode" defaultValue={record.suiting_mode ?? "not_suiting"}>
+              <option value="not_suiting">Not Suiting</option>
+              <option value="partialing">Partialing</option>
+              <option value="fullsuiting">Fullsuiting</option>
+            </Select>
+            <Field label="Appearance details" name="appearance_mode" defaultValue={record.appearance_mode} placeholder="Red harness, Pup Blazer gear, panel host…" />
             <Area label="How to Find Dusk" name="find_me_notes" defaultValue={record.find_me_notes} placeholder="One useful detail per line…" />
             <Area label="Description" name="description" defaultValue={record.description} />
             <label className="flex items-center gap-3 text-sm text-slate-300">
@@ -480,17 +485,15 @@ export function Alpha8WorkspaceEditor(props: Props) {
           <>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Category" name="category" required defaultValue={record.category ?? "other"} placeholder="Hotel, badge, gas…" />
-              <Select label="Status" name="cost_status" defaultValue={record.cost_status ?? "planned"}>
-                <option value="estimated">Estimated</option>
-                <option value="planned">Planned</option>
+              <Select label="Status" name="cost_status" defaultValue={record.cost_status ?? "budgeted"}>
+                <option value="unbudgeted">Unbudgeted</option>
+                <option value="budgeted">Budgeted</option>
                 <option value="paid">Paid</option>
-                <option value="reimbursed">Reimbursed</option>
               </Select>
             </div>
             <Field label="Description" name="description" defaultValue={record.description} placeholder="Four-night Hilton stay" />
             <Field label="Vendor" name="vendor" defaultValue={record.vendor} />
             <Field label="Amount" name="amount" required type="number" step="0.01" defaultValue={record.amount_cents ? Number(record.amount_cents) / 100 : ""} />
-            <Field label="Date" name="incurred_at" type="datetime-local" defaultValue={localDateTime(record.incurred_at)} />
           </>
         ) : null}
 

@@ -9,6 +9,8 @@ export function buildBackgroundPrompt(
   brandConfig?: BrandConfig | null,
 ) {
   const lines = [
+    "PURPOSE: This image is promotional social-story artwork for Dusk, a furry announcing that they will be attending a furry convention / furcon. It is meant to be posted cleanly on X, Snapchat, and Instagram Story so other furries can immediately understand where Dusk is going and how to find them.",
+    "FORMAT AND HIERARCHY: Build it as a polished social Story graphic, not generic concept art. Keep the primary visual hierarchy centered on the page. The application will overlay the exact event information and How to Find Dusk schedule afterward.",
     "Create a premium vertical 9:16 scenic background for a Dusk Induskries event-route poster.",
     "Visual mood: dusk sky, electric aqua, cobalt blue, violet and magenta; playful furry road-trip energy; crisp polished illustration rather than generic neon wallpaper.",
     `Current event theme: ${route.current.eventTheme || "energetic furry event"}.`,

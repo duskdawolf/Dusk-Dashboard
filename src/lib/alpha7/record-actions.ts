@@ -7,6 +7,7 @@ export const ALPHA7_ACTION_TYPES = [
   "upsert_cost",
   "upsert_packing_item",
   "upsert_prep_task",
+  "upsert_sub_event",
   "update_event",
   "update_con_prep",
 ] as const;
@@ -74,6 +75,24 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "source",
     "required",
   ]),
+  upsert_sub_event: new Set([
+    "title",
+    "starts_at",
+    "ends_at",
+    "location",
+    "room",
+    "description",
+    "attendance_status",
+    "suiting_mode",
+    "show_in_find_dusk",
+    "feature_on_next_stop",
+    "next_stop_priority",
+    "reminder_enabled",
+    "reminder_minutes_before",
+    "source",
+    "source_url",
+    "source_metadata",
+  ]),
   upsert_prep_task: new Set([
     "title",
     "task_type",
@@ -106,6 +125,7 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "event_theme",
     "find_me_notes",
     "appearance_mode",
+    "suiting_mode",
   ]),
   update_con_prep: new Set([
     "status",
@@ -229,6 +249,40 @@ export async function executeAlpha7RecordAction(args: {
     },
   };
 
+  if (args.actionType === "upsert_sub_event") {
+    if (recordId) {
+      const { data, error } = await supabase
+        .from("deployment_sub_events")
+        .update(changes)
+        .eq("id", recordId)
+        .eq("con_prep_id", args.conPrepId)
+        .select("*")
+        .single();
+      if (error) throw error;
+      return { table: "deployment_sub_events", row: data };
+    }
+
+    const { data, error } = await supabase
+      .from("deployment_sub_events")
+      .insert({
+        con_prep_id: args.conPrepId,
+        event_id: args.eventId,
+        owner_user_id: args.userId,
+        attendance_status: "going",
+        suiting_mode: "inherit",
+        show_in_find_dusk: false,
+        feature_on_next_stop: false,
+        reminder_enabled: true,
+        reminder_minutes_before: 30,
+        source: "chaos",
+        ...changes,
+      })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return { table: "deployment_sub_events", row: data };
+  }
+
   if (args.actionType === "upsert_cost") {
     if (recordId) {
       const { data, error } = await supabase
@@ -249,7 +303,7 @@ export async function executeAlpha7RecordAction(args: {
         event_id: args.eventId,
         owner_user_id: args.userId,
         currency: "USD",
-        cost_status: "planned",
+        cost_status: "budgeted",
         ...changes,
         source: "manual",
       })

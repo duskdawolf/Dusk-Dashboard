@@ -34,6 +34,7 @@ const proposalSchema = {
               "upsert_cost",
               "upsert_packing_item",
               "upsert_prep_task",
+              "upsert_sub_event",
               "update_event",
               "update_con_prep",
             ],
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
       historyRes,
       packingRes,
       tasksRes,
+      subEventsRes,
     ] = await Promise.all([
       supabase
         .from("copilot_messages")
@@ -183,10 +185,16 @@ export async function POST(request: NextRequest) {
         .select("*")
         .eq("con_prep_id", conPrepId)
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("deployment_sub_events")
+        .select("*")
+        .eq("con_prep_id", conPrepId)
+        .order("starts_at", { ascending: true }),
     ]);
 
     if (packingRes.error) throw packingRes.error;
     if (tasksRes.error) throw tasksRes.error;
+    if (subEventsRes.error) throw subEventsRes.error;
 
     const currentData = {
       event: context.event,
@@ -197,6 +205,7 @@ export async function POST(request: NextRequest) {
       costs: context.costs,
       packingItems: packingRes.data ?? [],
       prepTasks: tasksRes.data ?? [],
+      subEvents: subEventsRes.data ?? [],
     };
 
     const userText = [
@@ -245,13 +254,14 @@ export async function POST(request: NextRequest) {
             "You are Chaos Copilot inside Dusk Induskries Convention Ops. " +
             "You may propose typed database updates but NEVER silently write them. " +
             "Use only information the user supplied, visible in an attachment, or already present in CURRENT DATABASE RECORDS. " +
-            "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, event details, and deployment/readiness details. " +
+            "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, schedule/sub-events, event details, and deployment/readiness details. " +
+            "When the user attaches a Sched or convention-schedule screenshot, extract each selected/relevant session as a separate upsert_sub_event proposal. Use the schedule exactly; never invent panels or times. " +
             "If an existing row matches, set record_id to its exact id. If a genuinely new row is needed, record_id must be null. " +
             "Never invent confirmation numbers, prices, dates, locations, hotel details, travel details, schedule details, packing facts, or task facts. " +
             "Money fields named *_cents must be integer cents. Use ISO-8601 timestamps when a date/time is sufficiently known. " +
             "Respect these enums: con-prep status = planning|ready|traveling|complete; " +
             "registration status = needed|ordered|paid|confirmed; " +
-            "cost_status = estimated|planned|paid|reimbursed; " +
+            "cost_status = unbudgeted|budgeted|paid; " +
             "travel kind = flight|train|bus|car|rideshare|other; " +
             "travel direction = outbound|return|local|other; " +
             "car_mode = self_drive|carpool_driver|carpool_passenger; " +

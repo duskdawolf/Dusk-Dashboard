@@ -3,6 +3,14 @@
 import { FormEvent, useState } from "react";
 import { WorkspaceSheet } from "./WorkspaceSheet";
 
+function localDateTime(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function iso(value: FormDataEntryValue | null) {
   const text = String(value ?? "").trim();
   if (!text) return null;
@@ -14,8 +22,33 @@ export function Alpha8AddDeploymentSheet(props: {
   onClose: () => void;
   onCreated: (prepId: string) => Promise<void> | void;
 }) {
+  const [query, setQuery] = useState("");
+  const [found, setFound] = useState<any | null>(null);
+  const [sources, setSources] = useState<Array<{ title: string; url: string }>>([]);
+  const [searching, setSearching] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  async function discover() {
+    if (!query.trim()) return;
+    setSearching(true);
+    setError("");
+    try {
+      const res = await fetch("/api/alpha9/deployments/discover", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Could not find event.");
+      setFound(json.found);
+      setSources(json.sources ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not find event.");
+    } finally {
+      setSearching(false);
+    }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,14 +63,13 @@ export function Alpha8AddDeploymentSheet(props: {
         end_at: iso(data.get("end_at")),
         location: String(data.get("location") ?? "").trim() || null,
         state_code: String(data.get("state_code") ?? "").trim() || null,
-        event_type: String(data.get("event_type") ?? "convention"),
-        tag: String(data.get("tag") ?? "Convention"),
+        event_type: "convention",
+        tag: "Convention",
         event_theme: String(data.get("event_theme") ?? "").trim() || null,
-        appearance_mode:
-          String(data.get("appearance_mode") ?? "").trim() || null,
-        notes: String(data.get("notes") ?? "").trim() || null,
+        description: String(data.get("description") ?? "").trim() || null,
         route_visible: true,
         status: "planning",
+        suiting_mode: String(data.get("suiting_mode") ?? "not_suiting"),
       };
 
       const res = await fetch("/api/alpha8/deployments", {
@@ -50,8 +82,8 @@ export function Alpha8AddDeploymentSheet(props: {
 
       await props.onCreated(json.prep.id);
       props.onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add deployment.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add deployment.");
     } finally {
       setBusy(false);
     }
@@ -60,152 +92,104 @@ export function Alpha8AddDeploymentSheet(props: {
   return (
     <WorkspaceSheet
       title="Add Deployment"
-      subtitle="Creates the event and its Convention Ops workspace together."
+      subtitle="Search official convention information first, then confirm it."
       onClose={props.onClose}
     >
-      <form onSubmit={submit} className="grid gap-4">
-        <label className="grid gap-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-            Event name
-          </span>
-          <input
-            name="title"
-            required
-            className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-          />
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Starts
-            </span>
+      <div className="grid gap-5">
+        <div className="rounded-2xl bg-white/[0.035] p-4">
+          <div className="text-xs font-black uppercase tracking-wider text-cyan-300">
+            Find convention
+          </div>
+          <div className="mt-3 flex gap-2">
             <input
-              name="start_at"
-              type="datetime-local"
-              required
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="FurPocalypse 2026"
+              className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
             />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Ends
-            </span>
-            <input
-              name="end_at"
-              type="datetime-local"
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-            />
-          </label>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Location
-            </span>
-            <input
-              name="location"
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-            />
-          </label>
-          <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              State
-            </span>
-            <input
-              name="state_code"
-              placeholder="CT"
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-            />
-          </label>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Event type
-            </span>
-            <select
-              name="event_type"
-              defaultValue="convention"
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+            <button
+              type="button"
+              disabled={searching || !query.trim()}
+              onClick={discover}
+              className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50"
             >
-              <option value="convention">Convention</option>
-              <option value="hosting">Hosting</option>
-              <option value="meetup">Meetup</option>
-              <option value="public">Public event</option>
-              <option value="performance">Performance</option>
+              {searching ? "Searching…" : "Find"}
+            </button>
+          </div>
+          {sources.length ? (
+            <div className="mt-3 text-xs text-slate-500">
+              Sources:{" "}
+              {sources.map((source, index) => (
+                <span key={source.url}>
+                  {index ? " · " : ""}
+                  <a href={source.url} target="_blank" rel="noreferrer" className="text-cyan-300 hover:underline">
+                    {source.title}
+                  </a>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <form key={JSON.stringify(found)} onSubmit={submit} className="grid gap-4">
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Event name</span>
+            <input name="title" required defaultValue={found?.title ?? query} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Starts</span>
+              <input name="start_at" type="datetime-local" required defaultValue={localDateTime(found?.start_at)} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Ends</span>
+              <input name="end_at" type="datetime-local" defaultValue={localDateTime(found?.end_at)} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Location</span>
+              <input name="location" defaultValue={found?.location ?? ""} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            </label>
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">State</span>
+              <input name="state_code" defaultValue={found?.state_code ?? ""} placeholder="CT" className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            </label>
+          </div>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Theme</span>
+            <input name="event_theme" defaultValue={found?.event_theme ?? ""} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Suiting?</span>
+            <select name="suiting_mode" defaultValue="not_suiting" className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white">
+              <option value="not_suiting">Not Suiting</option>
+              <option value="partialing">Partialing</option>
+              <option value="fullsuiting">Fullsuiting</option>
             </select>
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-              Tag
-            </span>
-            <input
-              name="tag"
-              defaultValue="Convention"
-              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-            />
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Description</span>
+            <textarea name="description" defaultValue={found?.description ?? ""} className="min-h-20 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
           </label>
-        </div>
 
-        <label className="grid gap-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-            Theme
-          </span>
-          <input
-            name="event_theme"
-            placeholder="Rock 'N' Roll Nightmare"
-            className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-          />
-        </label>
+          {error ? <div className="rounded-xl bg-red-400/10 p-3 text-sm text-red-200">{error}</div> : null}
 
-        <label className="grid gap-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-            Appearance
-          </span>
-          <input
-            name="appearance_mode"
-            placeholder="Fullsuit + panel host + nightlife"
-            className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-          />
-        </label>
-
-        <label className="grid gap-1.5">
-          <span className="text-xs font-black uppercase tracking-wider text-slate-500">
-            Prep notes
-          </span>
-          <textarea
-            name="notes"
-            className="min-h-24 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-          />
-        </label>
-
-        {error ? (
-          <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-sm text-red-200">
-            {error}
+          <div className="flex justify-end gap-2 border-t border-white/10 pt-4">
+            <button type="button" onClick={props.onClose} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300">
+              Cancel
+            </button>
+            <button type="submit" disabled={busy} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50">
+              {busy ? "Creating…" : "Add Deployment"}
+            </button>
           </div>
-        ) : null}
-
-        <div className="flex justify-end gap-2 border-t border-white/10 pt-4">
-          <button
-            type="button"
-            onClick={props.onClose}
-            className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={busy}
-            className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50"
-          >
-            {busy ? "Creating…" : "Add Deployment"}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </WorkspaceSheet>
   );
 }

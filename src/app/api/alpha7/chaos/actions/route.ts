@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         "upsert_cost",
         "upsert_packing_item",
         "upsert_prep_task",
+        "upsert_sub_event",
         "update_event",
         "update_con_prep",
       ])

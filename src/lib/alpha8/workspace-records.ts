@@ -129,6 +129,7 @@ const CONFIG = {
       "event_theme",
       "find_me_notes",
       "appearance_mode",
+      "suiting_mode",
     ],
   },
 } satisfies Record<
@@ -228,7 +229,7 @@ export async function createWorkspaceRecord(args: {
       owner_user_id: args.userId,
       currency: "USD",
       source: "manual",
-      cost_status: "planned",
+      cost_status: "budgeted",
       ...row,
     };
   }

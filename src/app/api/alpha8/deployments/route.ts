@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         event_theme: body.event_theme || null,
         find_me_notes: body.find_me_notes || null,
         appearance_mode: body.appearance_mode || null,
+        suiting_mode: body.suiting_mode || "not_suiting",
       })
       .select("*")
       .single();

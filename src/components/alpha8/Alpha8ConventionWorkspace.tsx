@@ -9,6 +9,7 @@ import {
   type EditorMode,
 } from "./Alpha8WorkspaceEditor";
 import { DisclosureCard } from "./DisclosureCard";
+import { Alpha9SubEventsCard } from "@/components/alpha9/Alpha9SubEventsCard";
 
 type Option = {
   id: string;
@@ -33,6 +34,7 @@ type Summary = {
   travel: any[];
   registrations: any[];
   costs: any[];
+  subEvents: any[];
   metrics: {
     packingTotal: number;
     packedCount: number;
@@ -42,6 +44,10 @@ type Summary = {
     nextTask: any | null;
     totalCostCents: number;
     paidCostCents: number;
+    budgetedCostCents: number;
+    unbudgetedCostCents: number;
+    subEventCount: number;
+    publicSubEventCount: number;
   };
 };
 
@@ -299,6 +305,13 @@ export function Alpha8ConventionWorkspace() {
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 font-bold text-cyan-100">
                   {metrics?.openTaskCount ?? 0} open tasks
+                </span>
+                <span className="rounded-full bg-violet-400/10 px-3 py-1.5 font-bold text-violet-100">
+                  {event?.suiting_mode === "fullsuiting"
+                    ? "🐺 Fullsuiting"
+                    : event?.suiting_mode === "partialing"
+                      ? "🐾 Partialing"
+                      : "Not suiting"}
                 </span>
                 <span className="rounded-full bg-violet-400/10 px-3 py-1.5 font-bold text-violet-100">
                   {packingSummary}
@@ -625,12 +638,25 @@ export function Alpha8ConventionWorkspace() {
           </DisclosureCard>
 
           <DisclosureCard
+            title="Schedule & Where to Find Dusk"
+            summary={`${summary?.subEvents?.length ?? 0} schedule items · ${metrics?.publicSubEventCount ?? 0} public`}
+            defaultOpen
+          >
+            <Alpha9SubEventsCard
+              conPrepId={selected}
+              eventSuitingMode={event?.suiting_mode ?? "not_suiting"}
+              subEvents={summary?.subEvents ?? []}
+              onChanged={refresh}
+            />
+          </DisclosureCard>
+
+          <DisclosureCard
             title="Budget & Costs"
             summary={
               metrics
-                ? `${money(metrics.totalCostCents)} planned · ${money(
+                ? `${money(metrics.budgetedCostCents)} budgeted · ${money(
                     metrics.paidCostCents,
-                  )} paid`
+                  )} paid · ${money(metrics.unbudgetedCostCents)} unbudgeted`
                 : "Loading costs…"
             }
             actions={
