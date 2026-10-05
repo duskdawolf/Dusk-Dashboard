@@ -1,3 +1,10 @@
+export type NextStopStatus =
+  | "not_generated"
+  | "generating"
+  | "generated"
+  | "stale"
+  | "failed";
+
 export type RawEvent = Record<string, unknown> & {
   id: string;
   owner_user_id?: string | null;
@@ -17,9 +24,8 @@ export type RouteEvent = {
   id: string;
   ownerUserId: string | null;
   title: string;
-  city: string | null;
-  region: string | null;
-  venueName: string | null;
+  location: string | null;
+  stateCode: string | null;
   startAt: string | null;
   endAt: string | null;
   routeVisible: boolean;
@@ -36,7 +42,7 @@ export type RouteContext = {
   next: RouteEvent[];
 };
 
-export type GeneratedCopyFields = {
+export type NextStopCopy = {
   headline: string;
   subheadline: string;
   currentEventKicker: string;
@@ -46,29 +52,9 @@ export type GeneratedCopyFields = {
   pastLabel: string;
   futureLabel: string;
   artDirection: string;
-};
-
-export type NextStopCopy = GeneratedCopyFields & {
   currentEventTitle: string;
   locationLine: string;
   dateLine: string;
-};
-
-export type NextStopStatus =
-  | 'not_generated'
-  | 'generating'
-  | 'generated'
-  | 'stale'
-  | 'failed';
-
-export type GeneratedAsset = {
-  imageUrl: string;
-  imagePath: string;
-  sourceHash: string;
-  copy: NextStopCopy;
-  prompt: string;
-  imageModel: string;
-  imageSize: string;
 };
 
 export type NextStopState = {
@@ -80,4 +66,14 @@ export type NextStopState = {
   imageUrl: string | null;
   generatedAt: string | null;
   copy: NextStopCopy | null;
+};
+
+export type GeneratedAsset = {
+  imageUrl: string;
+  imagePath: string;
+  sourceHash: string;
+  copy: NextStopCopy;
+  prompt: string;
+  imageModel: string;
+  imageSize: string;
 };

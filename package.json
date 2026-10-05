@@ -12,30 +12,31 @@
   "dependencies": {
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "d3-geo": "latest",
     "lucide-react": "latest",
+    "luxon": "latest",
     "next": "latest",
+    "openai": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "sharp": "^0.35.5",
     "stripe": "latest",
-    "zod": "latest",
-    "d3-geo": "latest",
     "topojson-client": "latest",
     "us-atlas": "latest",
-    "luxon": "latest",
     "web-push": "latest",
-    "openai": "latest"
+    "zod": "latest"
   },
   "devDependencies": {
+    "@types/d3-geo": "latest",
+    "@types/luxon": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/topojson-client": "latest",
+    "@types/web-push": "latest",
     "autoprefixer": "latest",
     "postcss": "latest",
     "tailwindcss": "^3.4.17",
-    "typescript": "latest",
-    "@types/d3-geo": "latest",
-    "@types/topojson-client": "latest",
-    "@types/luxon": "latest",
-    "@types/web-push": "latest"
+    "typescript": "latest"
   }
 }

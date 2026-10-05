@@ -1,13 +1,12 @@
-import { createHash } from 'node:crypto';
-import type { RouteContext, RouteEvent } from './types';
+import { createHash } from "node:crypto";
+import type { RouteContext, RouteEvent } from "./types";
 
-function eventFingerprint(event: RouteEvent) {
+function fingerprint(event: RouteEvent) {
   return {
     id: event.id,
     title: event.title,
-    city: event.city,
-    region: event.region,
-    venueName: event.venueName,
+    location: event.location,
+    stateCode: event.stateCode,
     startAt: event.startAt,
     endAt: event.endAt,
     routeVisible: event.routeVisible,
@@ -19,11 +18,14 @@ function eventFingerprint(event: RouteEvent) {
 }
 
 export function buildSourceHash(route: RouteContext) {
-  const value = JSON.stringify({
-    previous: route.previous.map(eventFingerprint),
-    current: eventFingerprint(route.current),
-    next: route.next.map(eventFingerprint),
-    generatorVersion: 'v26-alpha7-next-stop-1',
-  });
-  return createHash('sha256').update(value).digest('hex');
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        previous: route.previous.map(fingerprint),
+        current: fingerprint(route.current),
+        next: route.next.map(fingerprint),
+        generator: "v26-alpha7-complete-1",
+      }),
+    )
+    .digest("hex");
 }
