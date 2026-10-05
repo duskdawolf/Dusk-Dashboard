@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { WorkspaceSheet } from "./WorkspaceSheet";
+import { TagInput } from "@/components/alpha91/TagInput";
 
 function localDateTime(value?: string | null) {
   if (!value) return "";
@@ -9,6 +10,17 @@ function localDateTime(value?: string | null) {
   if (Number.isNaN(date.valueOf())) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function parseTags(value: FormDataEntryValue | null) {
+  return Array.from(
+    new Set(
+      String(value ?? "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  );
 }
 
 function iso(value: FormDataEntryValue | null) {
@@ -64,7 +76,8 @@ export function Alpha8AddDeploymentSheet(props: {
         location: String(data.get("location") ?? "").trim() || null,
         state_code: String(data.get("state_code") ?? "").trim() || null,
         event_type: "convention",
-        tag: "Convention",
+        tags: parseTags(data.get("tags")),
+        tag: parseTags(data.get("tags"))[0] ?? "Convention",
         event_theme: String(data.get("event_theme") ?? "").trim() || null,
         description: String(data.get("description") ?? "").trim() || null,
         route_visible: true,
@@ -163,6 +176,11 @@ export function Alpha8AddDeploymentSheet(props: {
             <span className="text-xs font-black uppercase tracking-wider text-slate-500">Theme</span>
             <input name="event_theme" defaultValue={found?.event_theme ?? ""} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
           </label>
+
+          <TagInput
+            name="tags"
+            defaultTags="Convention"
+          />
 
           <label className="grid gap-1.5">
             <span className="text-xs font-black uppercase tracking-wider text-slate-500">Suiting?</span>

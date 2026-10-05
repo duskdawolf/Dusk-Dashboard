@@ -115,6 +115,7 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "location",
     "description",
     "tag",
+    "tags",
     "event_type",
     "state_code",
     "latitude",
@@ -250,6 +251,25 @@ export async function executeAlpha7RecordAction(args: {
   };
 
   if (args.actionType === "upsert_sub_event") {
+    if (
+      Object.prototype.hasOwnProperty.call(changes, "starts_at") &&
+      !changes.starts_at
+    ) {
+      throw new Error(
+        "Schedule items require an exact start date/time. The proposed start time was empty.",
+      );
+    }
+
+    if (!recordId && !changes.starts_at) {
+      throw new Error(
+        "Chaos cannot add this schedule item yet because no exact start date/time was extracted. Add the time manually or provide a schedule screenshot that clearly shows it.",
+      );
+    }
+
+    if (!recordId && !changes.title) {
+      throw new Error("Schedule items require a title.");
+    }
+
     if (recordId) {
       const { data, error } = await supabase
         .from("deployment_sub_events")

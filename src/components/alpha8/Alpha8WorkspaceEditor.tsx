@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { WorkspaceSheet } from "./WorkspaceSheet";
+import { TagInput } from "@/components/alpha91/TagInput";
 
 export type EditorMode =
   | "event"
@@ -34,6 +35,17 @@ function isoOrNull(value: FormDataEntryValue | null) {
   if (!text) return null;
   const date = new Date(text);
   return Number.isNaN(date.valueOf()) ? null : date.toISOString();
+}
+
+function tagList(value: FormDataEntryValue | null) {
+  return Array.from(
+    new Set(
+      String(value ?? "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    ),
+  );
 }
 
 function cents(value: FormDataEntryValue | null) {
@@ -149,8 +161,9 @@ export function Alpha8WorkspaceEditor(props: Props) {
             end_at: isoOrNull(data.get("end_at")),
             location: String(data.get("location") ?? "").trim() || null,
             state_code: String(data.get("state_code") ?? "").trim() || null,
-            event_type: String(data.get("event_type") ?? "convention"),
-            tag: String(data.get("tag") ?? "Convention"),
+            event_type: String(data.get("event_type") ?? "convention").toLowerCase(),
+            tags: tagList(data.get("tags")),
+            tag: tagList(data.get("tags"))[0] ?? "Event",
             event_theme: String(data.get("event_theme") ?? "").trim() || null,
             appearance_mode:
               String(data.get("appearance_mode") ?? "").trim() || null,
@@ -340,10 +353,24 @@ export function Alpha8WorkspaceEditor(props: Props) {
               <Field label="Location" name="location" defaultValue={record.location} />
               <Field label="State code" name="state_code" defaultValue={record.state_code} placeholder="CT" />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Event type" name="event_type" defaultValue={record.event_type ?? "convention"} />
-              <Field label="Tag" name="tag" defaultValue={record.tag ?? "Convention"} />
-            </div>
+            <Select
+              label="Event type"
+              name="event_type"
+              defaultValue={String(record.event_type ?? "convention").toLowerCase()}
+            >
+              <option value="convention">Convention</option>
+              <option value="meetup">Meetup</option>
+              <option value="hosting">Hosting</option>
+              <option value="public">Public</option>
+            </Select>
+            <TagInput
+              name="tags"
+              defaultTags={
+                Array.isArray(record.tags) && record.tags.length
+                  ? record.tags
+                  : record.tag
+              }
+            />
             <Field label="Event theme" name="event_theme" defaultValue={record.event_theme} />
             <Select label="Suiting?" name="suiting_mode" defaultValue={record.suiting_mode ?? "not_suiting"}>
               <option value="not_suiting">Not Suiting</option>

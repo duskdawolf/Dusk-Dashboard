@@ -78,6 +78,7 @@ export async function POST(request: NextRequest) {
     const conPrepId = String(form.get("conPrepId") ?? "");
     const instruction = String(form.get("instruction") ?? "").trim();
     const maybeFile = form.get("image");
+    const mediaId = String(form.get("mediaId") ?? "").trim() || null;
     const file =
       maybeFile instanceof File && maybeFile.size > 0 ? maybeFile : null;
 
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!instruction && !file) {
+    if (!instruction && !file && !mediaId) {
       return NextResponse.json(
         { error: "Enter an instruction or attach an image." },
         { status: 400 },
@@ -161,6 +162,58 @@ export async function POST(request: NextRequest) {
       attachmentId = attachment.id;
       imageDataUrl =
         `data:${file.type};base64,${bytes.toString("base64")}`;
+    }
+
+    if (!file && mediaId) {
+      const { data: media, error: mediaError } = await supabase
+        .from("media")
+        .select("*")
+        .eq("id", mediaId)
+        .single();
+
+      if (mediaError) throw mediaError;
+      if (media.owner_user_id && media.owner_user_id !== user.id) {
+        throw new Error("FORBIDDEN");
+      }
+      if (media.kind !== "image") {
+        throw new Error("Chaos image analysis currently requires an image.");
+      }
+
+      const mediaResponse = await fetch(media.url);
+      if (!mediaResponse.ok) {
+        throw new Error("Could not read the selected Media Library image.");
+      }
+
+      const bytes = Buffer.from(await mediaResponse.arrayBuffer());
+      const mimeType =
+        media.mime_type ||
+        mediaResponse.headers.get("content-type") ||
+        "image/png";
+
+      const { data: attachment, error: attachmentError } = await supabase
+        .from("copilot_attachments")
+        .insert({
+          user_id: user.id,
+          thread_id: thread.id,
+          con_prep_id: conPrepId,
+          event_id: context.event.id,
+          original_name: media.title || "Media Library image",
+          storage_path: media.storage_path || media.url,
+          mime_type: mimeType,
+          size_bytes: bytes.byteLength,
+          metadata: {
+            source: "media_library",
+            media_id: media.id,
+          },
+        })
+        .select("*")
+        .single();
+
+      if (attachmentError) throw attachmentError;
+
+      attachmentId = attachment.id;
+      imageDataUrl =
+        `data:${mimeType};base64,${bytes.toString("base64")}`;
     }
 
     const [
@@ -256,6 +309,7 @@ export async function POST(request: NextRequest) {
             "Use only information the user supplied, visible in an attachment, or already present in CURRENT DATABASE RECORDS. " +
             "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, schedule/sub-events, event details, and deployment/readiness details. " +
             "When the user attaches a Sched or convention-schedule screenshot, extract each selected/relevant session as a separate upsert_sub_event proposal. Use the schedule exactly; never invent panels or times. " +
+            "CRITICAL: NEVER create a NEW upsert_sub_event proposal unless changes.starts_at contains an exact ISO timestamp. If the screenshot does not provide enough date/time context, explain what is missing and do not propose that row yet. You may combine a clearly visible schedule day/time with known convention dates when unambiguous. " +
             "If an existing row matches, set record_id to its exact id. If a genuinely new row is needed, record_id must be null. " +
             "Never invent confirmation numbers, prices, dates, locations, hotel details, travel details, schedule details, packing facts, or task facts. " +
             "Money fields named *_cents must be integer cents. Use ISO-8601 timestamps when a date/time is sufficiently known. " +

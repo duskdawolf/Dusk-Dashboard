@@ -1,5 +1,6 @@
 "use client";
 
+import { MediaLibraryPicker, type MediaLibraryItem } from "@/components/media/MediaLibraryPicker";
 import {
   FormEvent,
   useCallback,
@@ -25,6 +26,8 @@ export function Alpha8ChaosCard({
 }) {
   const [instruction, setInstruction] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [libraryItem, setLibraryItem] = useState<MediaLibraryItem | null>(null);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
   const [actions, setActions] = useState<Action[]>([]);
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,12 +53,13 @@ export function Alpha8ChaosCard({
     setSummary("");
     setInstruction("");
     setFile(null);
+    setLibraryItem(null);
     loadActions().catch((e) => setError(e.message));
   }, [loadActions]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!instruction.trim() && !file) return;
+    if (!instruction.trim() && !file && !libraryItem) return;
 
     setBusy(true);
     setError("");
@@ -65,6 +69,7 @@ export function Alpha8ChaosCard({
       form.set("conPrepId", conPrepId);
       form.set("instruction", instruction);
       if (file) form.set("image", file);
+      if (!file && libraryItem) form.set("mediaId", libraryItem.id);
 
       const res = await fetch("/api/alpha7/chaos/analyze", {
         method: "POST",
@@ -79,6 +84,7 @@ export function Alpha8ChaosCard({
       setSummary(json.summary ?? "");
       setInstruction("");
       setFile(null);
+      setLibraryItem(null);
       await loadActions();
     } catch (e) {
       setError(
@@ -153,15 +159,27 @@ export function Alpha8ChaosCard({
             />
           </label>
 
+          <button
+            type="button"
+            onClick={() => setMediaPickerOpen(true)}
+            className="rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-bold text-slate-200"
+          >
+            Media Library
+          </button>
+
           {file ? (
             <span className="max-w-40 truncate text-xs text-slate-500">
               {file.name}
+            </span>
+          ) : libraryItem ? (
+            <span className="max-w-40 truncate text-xs text-slate-500">
+              {libraryItem.title}
             </span>
           ) : null}
 
           <button
             type="submit"
-            disabled={busy || (!instruction.trim() && !file)}
+            disabled={busy || (!instruction.trim() && !file && !libraryItem)}
             className="ml-auto rounded-xl bg-cyan-300 px-4 py-2 text-xs font-black text-slate-950 disabled:opacity-40"
           >
             {busy ? "Thinking…" : "Send"}
@@ -214,6 +232,17 @@ export function Alpha8ChaosCard({
           ))}
         </div>
       ) : null}
+
+      <MediaLibraryPicker
+        open={mediaPickerOpen}
+        kind="image"
+        title="Choose Image for Chaos"
+        onClose={() => setMediaPickerOpen(false)}
+        onSelect={(item) => {
+          setLibraryItem(item);
+          setFile(null);
+        }}
+      />
     </div>
   );
 }

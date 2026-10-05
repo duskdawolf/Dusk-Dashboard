@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alpha8ChaosCard } from "./Alpha8ChaosCard";
 import { Alpha8NextStopCard } from "./Alpha8NextStopCard";
@@ -227,6 +228,14 @@ export function Alpha8ConventionWorkspace() {
         summary?.hotels?.length ?? 0
       } hotel`;
 
+  const eventTags =
+    Array.isArray(event?.tags) && event.tags.length
+      ? event.tags
+      : String(event?.tag ?? "")
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
   return (
     <section className="grid gap-5">
       <header className="overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-br from-[#101b2e] via-[#111a2d] to-[#19192e] shadow-[0_28px_80px_rgba(0,0,0,.18)]">
@@ -262,6 +271,18 @@ export function Alpha8ConventionWorkspace() {
               >
                 + Add Deployment
               </button>
+              <Link
+                href="/dashboard/con-prep/deployments"
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-black text-white"
+              >
+                All Deployments
+              </Link>
+              <Link
+                href="/dashboard/media"
+                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-black text-white"
+              >
+                Media Library
+              </Link>
               <button
                 type="button"
                 onClick={() =>
@@ -302,6 +323,19 @@ export function Alpha8ConventionWorkspace() {
                 {dateRange(event?.start_at, event?.end_at)}
                 {event?.location ? ` · ${event.location}` : ""}
               </div>
+              {eventTags.length ? (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {eventTags.map((tag: string) => (
+                    <Link
+                      key={tag}
+                      href={`/dashboard/con-prep/deployments?tag=${encodeURIComponent(tag)}`}
+                      className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] font-black text-slate-300 hover:border-cyan-300/30 hover:text-cyan-200"
+                    >
+                      {tag}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
               <div className="mt-3 flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full bg-cyan-300/10 px-3 py-1.5 font-bold text-cyan-100">
                   {metrics?.openTaskCount ?? 0} open tasks

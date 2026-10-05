@@ -32,7 +32,7 @@ export async function requireAlpha7Admin() {
             cookieStore.set(name, value, options),
           );
         } catch {
-          // Fine in read-only server rendering contexts.
+          // Read-only render context.
         }
       },
     },
@@ -55,9 +55,43 @@ export async function requireAlpha7Admin() {
   return user;
 }
 
+function readableError(error: unknown) {
+  if (error instanceof Error) return error.message;
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const parts = [
+      typeof value.message === "string" ? value.message : null,
+      typeof value.details === "string" ? value.details : null,
+      typeof value.hint === "string" ? value.hint : null,
+      typeof value.code === "string" ? `(${value.code})` : null,
+    ].filter(Boolean);
+
+    if (parts.length) return parts.join(" — ");
+  }
+
+  if (typeof error === "string") return error;
+  return "Unknown error";
+}
+
 export function alpha7ErrorResponse(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unknown error";
+  const message = readableError(error);
+
   if (message === "UNAUTHORIZED") return { status: 401, message: "Unauthorized" };
   if (message === "FORBIDDEN") return { status: 403, message: "Forbidden" };
+
+  const code =
+    error && typeof error === "object"
+      ? String((error as Record<string, unknown>).code ?? "")
+      : "";
+
+  if (
+    code.startsWith("23") ||
+    code.startsWith("PGRST") ||
+    /required|invalid|constraint|null value|violates/i.test(message)
+  ) {
+    return { status: 400, message };
+  }
+
   return { status: 500, message };
 }

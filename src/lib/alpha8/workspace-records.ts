@@ -121,6 +121,7 @@ const CONFIG = {
       "location",
       "description",
       "tag",
+      "tags",
       "event_type",
       "state_code",
       "published",
