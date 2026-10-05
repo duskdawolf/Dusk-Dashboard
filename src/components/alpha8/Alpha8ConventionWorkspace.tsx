@@ -169,6 +169,17 @@ export function Alpha8ConventionWorkspace() {
   }, [loadOptions]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("add") !== "1") return;
+
+    setAddDeployment(true);
+    url.searchParams.delete("add");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  useEffect(() => {
     if (!selected) return;
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -272,7 +283,7 @@ export function Alpha8ConventionWorkspace() {
                 + Add Deployment
               </button>
               <Link
-                href="/dashboard/con-prep/deployments"
+                href="/dashboard/events"
                 className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-black text-white"
               >
                 All Deployments
@@ -328,7 +339,7 @@ export function Alpha8ConventionWorkspace() {
                   {eventTags.map((tag: string) => (
                     <Link
                       key={tag}
-                      href={`/dashboard/con-prep/deployments?tag=${encodeURIComponent(tag)}`}
+                      href={`/dashboard/events?scope=all&tag=${encodeURIComponent(tag)}`}
                       className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] font-black text-slate-300 hover:border-cyan-300/30 hover:text-cyan-200"
                     >
                       {tag}

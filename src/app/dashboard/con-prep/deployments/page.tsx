@@ -1,10 +1,5 @@
-import { Suspense } from "react";
-import { DeploymentListPage } from "@/components/alpha91/DeploymentListPage";
+import { redirect } from "next/navigation";
 
-export default function DeploymentsPage() {
-  return (
-    <Suspense fallback={null}>
-      <DeploymentListPage />
-    </Suspense>
-  );
+export default function LegacyDeploymentListRedirect() {
+  redirect("/dashboard/events");
 }
