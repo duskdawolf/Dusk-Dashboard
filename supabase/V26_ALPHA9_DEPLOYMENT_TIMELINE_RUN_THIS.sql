@@ -66,6 +66,11 @@ create trigger deployment_sub_events_set_updated_at
   for each row execute function public.dusk_set_updated_at();
 
 -- Alpha 9 budget semantics.
+-- IMPORTANT: remove the old enum-like CHECK before migrating existing rows,
+-- because the old constraint does not permit the new value 'budgeted'.
+alter table public.cost_entries
+  drop constraint if exists cost_entries_cost_status_check;
+
 update public.cost_entries
 set cost_status = case
   when cost_status in ('estimated','planned') then 'budgeted'
@@ -73,9 +78,6 @@ set cost_status = case
   else cost_status
 end
 where cost_status in ('estimated','planned','reimbursed');
-
-alter table public.cost_entries
-  drop constraint if exists cost_entries_cost_status_check;
 
 alter table public.cost_entries
   add constraint cost_entries_cost_status_check
