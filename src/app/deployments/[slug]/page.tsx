@@ -31,7 +31,10 @@ function metricTotal(post: {
     impressions?: number;
   }[];
 }) {
-  return post.platforms.reduce(
+  return post.platforms.reduce<{
+    reach: number;
+    engagements: number;
+  }>(
     (totals, platform) => ({
       reach:
         totals.reach +
