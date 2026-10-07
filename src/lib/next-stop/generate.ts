@@ -27,6 +27,7 @@ import type {
   GeneratedAsset,
   GeneratedBackgroundAsset,
   NextStopCopy,
+  NextStopValidation,
   RouteContext,
 } from "./types";
 
@@ -185,7 +186,7 @@ async function finalPosterRequest(args: {
   }
 
   const first = await render();
-  let validation;
+  let validation: NextStopValidation;
 
   try {
     validation = await validateNextStopPoster({
@@ -206,7 +207,7 @@ async function finalPosterRequest(args: {
           : "Validation error",
       attempt: 1,
       model: "validation-error",
-    } as const;
+    };
   }
 
   if (validation.passed) {
