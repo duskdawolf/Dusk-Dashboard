@@ -42,7 +42,7 @@ export default async function DashboardPage() {
     },
     {
       href: "/dashboard/con-prep",
-      title: "Convention Ops",
+      title: "Deployment Ops",
       value: prepCount ?? 0,
       text: "Deploy conventions, build nested packing/loadouts, plan travel, production, readiness, and Tactical Deployment Plans.",
     },

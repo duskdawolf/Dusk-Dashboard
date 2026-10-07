@@ -22,7 +22,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Past events open as Case Studies. Convention Ops is for upcoming deployments.",
+            "Past events open as Case Studies. Deployment Ops is for upcoming deployments.",
         },
         { status: 400 },
       );

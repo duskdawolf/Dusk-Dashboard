@@ -4,6 +4,7 @@ import {
   requireAlpha7Admin,
 } from "@/lib/alpha7/auth";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
+import { buildWhereToFindDusk } from "@/lib/alpha31/where-to-find-dusk";
 
 export async function GET(
   _request: Request,
@@ -68,16 +69,12 @@ export async function GET(
 
     const packedCount = packing.filter((item) => item.packed).length;
     const taskDoneCount = tasks.filter((task) =>
-      ["done", "complete", "completed"].includes(
-        String(task.status).toLowerCase(),
-      ),
+      ["done", "skipped"].includes(String(task.status).toLowerCase()),
     ).length;
 
     const openTasks = tasks.filter(
       (task) =>
-        !["done", "complete", "completed", "cancelled"].includes(
-          String(task.status).toLowerCase(),
-        ),
+        !["done", "skipped"].includes(String(task.status).toLowerCase()),
     );
 
     const nextTask =
@@ -101,10 +98,7 @@ export async function GET(
     const paidCostCents = sum("paid");
     const unbudgetedCostCents = sum("unbudgeted");
 
-    const publicSubEvents = subEvents.filter(
-      (item) =>
-        item.show_in_find_dusk && item.attendance_status !== "not_going",
-    );
+    const whereToFind = await buildWhereToFindDusk(prep.event_id);
 
     return NextResponse.json({
       prep,
@@ -116,6 +110,7 @@ export async function GET(
       registrations,
       costs,
       subEvents,
+      whereToFind,
       metrics: {
         packingTotal: packing.length,
         packedCount,
@@ -129,7 +124,11 @@ export async function GET(
         paidCostCents,
         unbudgetedCostCents,
         subEventCount: subEvents.length,
-        publicSubEventCount: publicSubEvents.length,
+        publicSubEventCount: whereToFind.scheduleItems.length,
+        readinessScore: prep.readiness_score ?? 0,
+        taskReadinessScore: prep.task_readiness_score ?? 0,
+        budgetReadinessScore: prep.budget_readiness_score ?? 0,
+        packingReadinessScore: prep.packing_readiness_score ?? 0,
       },
     });
   } catch (error) {

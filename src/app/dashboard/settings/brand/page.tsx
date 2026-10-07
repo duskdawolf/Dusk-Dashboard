@@ -7,7 +7,7 @@ export default function BrandMediaSettingsPage() {
         <div className="text-[11px] font-black uppercase tracking-[.22em] text-cyan-300">Settings</div>
         <h1 className="mt-2 text-3xl font-black text-white">Brand & Media</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-          Global Dusk artwork, logo, and Next Stop composition defaults live here instead of inside a single convention workspace.
+          Global Dusk artwork, logo, and Next Stop composition defaults live here instead of inside a single deployment workspace.
         </p>
       </header>
       <Alpha71BrandAssetsPanel />

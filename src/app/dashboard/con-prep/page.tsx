@@ -5,7 +5,7 @@ import { requireDashboardUser } from "@/lib/auth";
 import { ensureProfileRow } from "@/lib/profiles";
 
 export const metadata = {
-  title: "Convention Ops · Dusk Dashboard",
+  title: "Deployment Ops · Dusk Dashboard",
 };
 
 export const dynamic = "force-dynamic";

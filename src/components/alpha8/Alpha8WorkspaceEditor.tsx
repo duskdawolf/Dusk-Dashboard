@@ -20,6 +20,7 @@ type Props = {
   record?: any | null;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
+  tasks?: any[];
 };
 
 function localDateTime(value?: string | null) {
@@ -125,7 +126,7 @@ function Select(props: {
 
 const modeTitle: Record<EditorMode, string> = {
   event: "Edit Event",
-  readiness: "Edit Readiness",
+  readiness: "Edit Deployment Timing",
   packing: "Packing Item",
   task: "Prep Task",
   hotel: "Hotel",
@@ -168,8 +169,6 @@ export function Alpha8WorkspaceEditor(props: Props) {
             appearance_mode:
               String(data.get("appearance_mode") ?? "").trim() || null,
             suiting_mode: String(data.get("suiting_mode") ?? "not_suiting"),
-            find_me_notes:
-              String(data.get("find_me_notes") ?? "").trim() || null,
             description:
               String(data.get("description") ?? "").trim() || null,
             route_visible: data.get("route_visible") === "on",
@@ -178,8 +177,6 @@ export function Alpha8WorkspaceEditor(props: Props) {
 
         case "readiness":
           values = {
-            status: String(data.get("status") ?? "planning"),
-            readiness_score: Number(data.get("readiness_score") ?? 0),
             target_arrival_at: isoOrNull(data.get("target_arrival_at")),
             departure_at: isoOrNull(data.get("departure_at")),
             prep_deadline_at: isoOrNull(data.get("prep_deadline_at")),
@@ -211,6 +208,10 @@ export function Alpha8WorkspaceEditor(props: Props) {
             duration_minutes: Number(data.get("duration_minutes") ?? 0) || null,
             status: String(data.get("status") ?? "todo"),
             required: data.get("required") === "on",
+            counts_toward_readiness:
+              data.get("counts_toward_readiness") === "on",
+            parent_task_id:
+              String(data.get("parent_task_id") ?? "").trim() || null,
             notes: String(data.get("notes") ?? "").trim() || null,
             sort_order: Number(data.get("sort_order") ?? 0),
             source: "manual",
@@ -338,7 +339,7 @@ export function Alpha8WorkspaceEditor(props: Props) {
   return (
     <WorkspaceSheet
       title={`${creating && !["event", "readiness"].includes(props.mode) ? "Add " : ""}${modeTitle[props.mode]}`}
-      subtitle="Changes save directly to Convention Ops."
+      subtitle="Changes save directly to Deployment Ops."
       onClose={props.onClose}
     >
       <form onSubmit={submit} className="grid gap-4">
@@ -378,7 +379,6 @@ export function Alpha8WorkspaceEditor(props: Props) {
               <option value="fullsuiting">Fullsuiting</option>
             </Select>
             <Field label="Appearance details" name="appearance_mode" defaultValue={record.appearance_mode} placeholder="Red harness, Pup Blazer gear, panel host…" />
-            <Area label="How to Find Dusk" name="find_me_notes" defaultValue={record.find_me_notes} placeholder="One useful detail per line…" />
             <Area label="Description" name="description" defaultValue={record.description} />
             <label className="flex items-center gap-3 text-sm text-slate-300">
               <input name="route_visible" type="checkbox" defaultChecked={record.route_visible !== false} />
@@ -389,14 +389,10 @@ export function Alpha8WorkspaceEditor(props: Props) {
 
         {props.mode === "readiness" ? (
           <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Select label="Deployment state" name="status" defaultValue={record.status ?? "planning"}>
-                <option value="planning">Planning</option>
-                <option value="ready">Ready</option>
-                <option value="traveling">Traveling</option>
-                <option value="complete">Complete</option>
-              </Select>
-              <Field label="Readiness %" name="readiness_score" type="number" defaultValue={record.readiness_score ?? 0} />
+            <div className="rounded-2xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4 text-sm leading-6 text-slate-300">
+              Status and readiness are automatic in Alpha v31. Readiness is
+              55% tasks, 35% budget, and 10% packing. Deployment state moves
+              automatically from Planning → Packing → Traveling → Completed.
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Target arrival" name="target_arrival_at" type="datetime-local" defaultValue={localDateTime(record.target_arrival_at)} />
@@ -432,17 +428,55 @@ export function Alpha8WorkspaceEditor(props: Props) {
               <Field label="Task type" name="task_type" defaultValue={record.task_type ?? "prep"} />
               <Select label="Status" name="status" defaultValue={record.status ?? "todo"}>
                 <option value="todo">To do</option>
-                <option value="in_progress">In progress</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="doing">Doing</option>
                 <option value="done">Done</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="skipped">Skipped</option>
               </Select>
               <Field label="Due" name="due_at" type="datetime-local" defaultValue={localDateTime(record.due_at)} />
               <Field label="Duration (minutes)" name="duration_minutes" type="number" defaultValue={record.duration_minutes ?? ""} />
               <Field label="Sort order" name="sort_order" type="number" defaultValue={record.sort_order ?? 0} />
             </div>
-            <label className="flex items-center gap-2 text-sm text-slate-300">
-              <input name="required" type="checkbox" defaultChecked={Boolean(record.required)} />
-              Required
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input name="required" type="checkbox" defaultChecked={record.id ? Boolean(record.required) : true} />
+                Required
+              </label>
+              <label className="flex items-center gap-2 text-sm text-slate-300">
+                <input
+                  name="counts_toward_readiness"
+                  type="checkbox"
+                  defaultChecked={
+                    record.id
+                      ? record.counts_toward_readiness !== false
+                      : true
+                  }
+                />
+                Counts toward readiness
+              </label>
+            </div>
+            <label className="grid gap-1.5">
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Parent task
+              </span>
+              <select
+                name="parent_task_id"
+                defaultValue={record.parent_task_id ?? ""}
+                className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              >
+                <option value="">None — standalone task</option>
+                {(props.tasks ?? [])
+                  .filter((task) => task.id !== record.id)
+                  .map((task) => (
+                    <option key={task.id} value={task.id}>
+                      {task.title}
+                    </option>
+                  ))}
+              </select>
+              <span className="text-[10px] text-slate-600">
+                Parent/container tasks do not count directly. Only terminal
+                leaf tasks count toward the 55% task-readiness score.
+              </span>
             </label>
             <Area label="Notes" name="notes" defaultValue={record.notes} />
           </>

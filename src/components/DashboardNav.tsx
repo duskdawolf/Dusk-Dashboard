@@ -9,7 +9,7 @@ const links = [
   { href: "/dashboard/media", label: "Media" },
   { href: "/dashboard/case-studies", label: "Case Studies" },
   { href: "/dashboard/posts", label: "Social Ops" },
-  { href: "/dashboard/con-prep", label: "Convention Ops" },
+  { href: "/dashboard/con-prep", label: "Deployment Ops" },
   { href: "/dashboard/notifications", label: "Notifications" },
   { href: "/dashboard/account", label: "Account" },
 ];

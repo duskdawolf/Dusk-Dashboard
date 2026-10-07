@@ -96,7 +96,7 @@ export function UnifiedEventsPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      setError(json.error ?? "Could not start Convention Ops.");
+      setError(json.error ?? "Could not start Deployment Ops.");
       return;
     }
 
@@ -112,7 +112,7 @@ export function UnifiedEventsPage() {
           </div>
           <h1 className="mt-1 text-3xl font-black text-white">Events</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            One event lifecycle: upcoming events open in Convention Ops; past
+            One event lifecycle: upcoming events open in Deployment Ops; past
             events become Case Studies in Chaos.
           </p>
         </div>
@@ -255,7 +255,7 @@ export function UnifiedEventsPage() {
                   onClick={() => openUpcoming(item)}
                   className="w-full rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950"
                 >
-                  {item.prep ? "Open Convention Ops" : "Start Convention Ops"}
+                  {item.prep ? "Open Deployment Ops" : "Start Deployment Ops"}
                 </button>
               ) : (
                 <Link

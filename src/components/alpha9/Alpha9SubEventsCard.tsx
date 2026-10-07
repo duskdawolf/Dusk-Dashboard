@@ -252,18 +252,13 @@ export function Alpha9SubEventsCard(props: {
 }) {
   const [editing, setEditing] = useState<any | "new" | null>(null);
 
-  const publicEvents = props.subEvents.filter(
-    (item) =>
-      item.show_in_find_dusk && item.attendance_status !== "not_going",
-  );
-
   return (
     <div className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-base font-black text-white">Schedule & Where to Find Dusk</div>
+          <div className="text-base font-black text-white">Schedule & Appearances</div>
           <div className="mt-1 text-xs text-slate-500">
-            Structured schedule drives reminders and the Next Stop card.
+            Structured schedule drives reminders, public appearances, and Next Stop.
           </div>
         </div>
         <button type="button" onClick={() => setEditing("new")} className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950">
@@ -314,28 +309,6 @@ export function Alpha9SubEventsCard(props: {
             No schedule items yet. Add them manually or give Chaos a screenshot from Sched.
           </div>
         ) : null}
-      </div>
-
-      <div className="rounded-2xl bg-cyan-300/[0.045] p-4">
-        <div className="text-[11px] font-black uppercase tracking-[.16em] text-cyan-300">
-          Where to Find Dusk
-        </div>
-        <div className="mt-2 grid gap-2">
-          {publicEvents.map((item) => (
-            <div key={item.id} className="text-sm text-slate-300">
-              <strong className="text-white">{item.title}</strong>
-              {" · "}
-              {timeLabel(item.starts_at)}
-              {" · "}
-              {suitingLabel(item.suiting_mode, props.eventSuitingMode)}
-            </div>
-          ))}
-          {!publicEvents.length ? (
-            <div className="text-sm text-slate-500">
-              Nothing is publicly marked yet.
-            </div>
-          ) : null}
-        </div>
       </div>
 
       {editing ? (

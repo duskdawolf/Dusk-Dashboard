@@ -35,7 +35,6 @@ const CONFIG = {
       "task_type",
       "due_at",
       "duration_minutes",
-      "status",
       "notes",
       "scheduled_start_at",
       "scheduled_end_at",
@@ -44,6 +43,7 @@ const CONFIG = {
       "sort_order",
       "source",
       "required",
+      "counts_toward_readiness",
     ],
   },
   hotel: {
@@ -108,7 +108,6 @@ const CONFIG = {
       "prep_deadline_at",
       "departure_at",
       "prep_complete_by",
-      "readiness_score",
       "ai_summary",
     ],
   },

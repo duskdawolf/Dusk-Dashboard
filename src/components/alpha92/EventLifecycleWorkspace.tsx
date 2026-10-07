@@ -131,7 +131,7 @@ export function EventLifecycleWorkspace({ eventId }: { eventId: string }) {
               onClick={() => openOps().catch((e) => setError(e.message))}
               className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950"
             >
-              Open Convention Ops
+              Open Deployment Ops
             </button>
           ) : (
             <div className="text-right">
@@ -158,7 +158,7 @@ export function EventLifecycleWorkspace({ eventId }: { eventId: string }) {
             This event is still upcoming.
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-            Planning belongs in Convention Ops. After the end date passes, the
+            Planning belongs in Deployment Ops. After the end date passes, the
             same event record automatically appears under Past Events and this
             page becomes its Case Study workspace.
           </p>
@@ -167,7 +167,7 @@ export function EventLifecycleWorkspace({ eventId }: { eventId: string }) {
             onClick={() => openOps().catch((e) => setError(e.message))}
             className="mt-4 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950"
           >
-            {prep ? "Continue Planning" : "Start Convention Ops"}
+            {prep ? "Continue Planning" : "Start Deployment Ops"}
           </button>
         </section>
       ) : (

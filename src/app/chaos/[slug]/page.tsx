@@ -57,7 +57,7 @@ export default async function IncidentReportPage({
 
   if (!report) notFound();
 
-  const { event, caseStudy, media, posts } = report;
+  const { event, caseStudy, media, posts, lifecycle } = report;
   const eventEndsAt = new Date(event.endAt ?? event.startAt).getTime();
   const isFuture = eventEndsAt >= Date.now();
   const documentType = isFuture ? "Tactical Deployment Plan" : "Incident Report";
@@ -135,7 +135,7 @@ export default async function IncidentReportPage({
         </div>
       </div>
 
-      {caseStudy ? (
+      {lifecycle === "case_study" && caseStudy ? (
         <section className="mt-10 grid gap-4 lg:grid-cols-3">
           <div className="card">
             <div className="eyebrow">

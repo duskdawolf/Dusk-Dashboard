@@ -148,7 +148,7 @@ export function ConOpsManager({
       const body = await jsonRequest("/api/admin/con-prep", { cache: "no-store" });
       setPreps(body.preps ?? []);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not refresh Convention Ops.");
+      setStatus(error instanceof Error ? error.message : "Could not refresh Deployment Ops.");
     }
   }
 
@@ -552,7 +552,7 @@ export function ConOpsManager({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="eyebrow">v26 Alpha · Convention Operations</div>
-            <h2 className="text-4xl font-black tracking-[-.04em]">Convention Ops</h2>
+            <h2 className="text-4xl font-black tracking-[-.04em]">Deployment Ops</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-400">
               Pick a deployment, then work that con below. Chaos Copilot™ is scoped
               only to the selected deployment and starts fresh when you switch.

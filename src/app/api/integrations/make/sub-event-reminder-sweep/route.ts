@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         scheduled_for: new Date().toISOString(),
         event_key: "con_prep.sub_event_reminder",
         dedupe_key: dedupeKey,
-        action_label: "Open Convention Ops",
+        action_label: "Open Deployment Ops",
         payload: {
           sub_event_id: row.id,
           starts_at: row.starts_at,

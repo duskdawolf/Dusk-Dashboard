@@ -35,7 +35,7 @@ export function DeploymentListPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-xs font-black uppercase tracking-[.2em] text-cyan-300">
-            Convention Ops
+            Deployment Ops
           </div>
           <h1 className="mt-1 text-3xl font-black text-white">
             Deployments{tag ? ` · ${tag}` : ""}

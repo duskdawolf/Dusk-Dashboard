@@ -107,6 +107,7 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "sort_order",
     "source",
     "required",
+    "counts_toward_readiness",
   ]),
   update_event: new Set([
     "title",
@@ -129,7 +130,6 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "suiting_mode",
   ]),
   update_con_prep: new Set([
-    "status",
     "target_arrival_at",
     "leave_for_airport_at",
     "packing_deadline",
@@ -137,7 +137,6 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "prep_deadline_at",
     "departure_at",
     "prep_complete_by",
-    "readiness_score",
     "ai_summary",
   ]),
 };

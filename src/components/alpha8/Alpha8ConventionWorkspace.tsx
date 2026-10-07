@@ -11,6 +11,7 @@ import {
 } from "./Alpha8WorkspaceEditor";
 import { DisclosureCard } from "./DisclosureCard";
 import { Alpha9SubEventsCard } from "@/components/alpha9/Alpha9SubEventsCard";
+import { Alpha31WhereToFindDuskCard } from "@/components/alpha31/Alpha31WhereToFindDuskCard";
 
 type Option = {
   id: string;
@@ -36,6 +37,7 @@ type Summary = {
   registrations: any[];
   costs: any[];
   subEvents: any[];
+  whereToFind: any;
   metrics: {
     packingTotal: number;
     packedCount: number;
@@ -49,6 +51,10 @@ type Summary = {
     unbudgetedCostCents: number;
     subEventCount: number;
     publicSubEventCount: number;
+    readinessScore: number;
+    taskReadinessScore: number;
+    budgetReadinessScore: number;
+    packingReadinessScore: number;
   };
 };
 
@@ -150,7 +156,7 @@ export function Alpha8ConventionWorkspace() {
     });
     const json = await res.json();
     if (!res.ok) {
-      throw new Error(json.error ?? "Could not load convention workspace");
+      throw new Error(json.error ?? "Could not load deployment workspace");
     }
     setSummary(json);
     setLoading(false);
@@ -210,7 +216,7 @@ export function Alpha8ConventionWorkspace() {
   if (!currentOption) {
     return (
       <section className="rounded-3xl border border-white/10 bg-[#0c1727] p-6 text-sm text-slate-400">
-        {error || "Loading Convention Ops…"}
+        {error || "Loading Deployment Ops…"}
       </section>
     );
   }
@@ -253,7 +259,7 @@ export function Alpha8ConventionWorkspace() {
         <div className="p-5 md:p-7">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[.22em] text-cyan-300">
-              Alpha v30 · Convention Ops
+              v26 Alpha 8 · Deployment Ops
             </div>
             <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-3xl">
               Convention Workspace
@@ -683,14 +689,27 @@ export function Alpha8ConventionWorkspace() {
           </DisclosureCard>
 
           <DisclosureCard
-            title="Schedule & Where to Find Dusk"
-            summary={`${summary?.subEvents?.length ?? 0} schedule items · ${metrics?.publicSubEventCount ?? 0} public`}
+            title="Schedule & Appearances"
+            summary={`${summary?.subEvents?.length ?? 0} schedule items · ${metrics?.publicSubEventCount ?? 0} public appearances`}
             defaultOpen
           >
             <Alpha9SubEventsCard
               conPrepId={selected}
               eventSuitingMode={event?.suiting_mode ?? "not_suiting"}
               subEvents={summary?.subEvents ?? []}
+              onChanged={refresh}
+            />
+          </DisclosureCard>
+
+          <DisclosureCard
+            title="Where to Find Dusk"
+            summary={`${summary?.whereToFind?.publicLines?.length ?? 0} public details · also feeds Next Stop`}
+            defaultOpen
+          >
+            <Alpha31WhereToFindDuskCard
+              conPrepId={selected}
+              eventId={event?.id}
+              whereToFind={summary?.whereToFind}
               onChanged={refresh}
             />
           </DisclosureCard>
@@ -747,7 +766,7 @@ export function Alpha8ConventionWorkspace() {
           <DisclosureCard
             title="Event Notes & Programming"
             summary={
-              event?.find_me_notes || prep?.notes || "No notes added"
+              event?.appearance_mode || prep?.notes || "No notes added"
             }
             actions={
               <EditButton
@@ -762,16 +781,6 @@ export function Alpha8ConventionWorkspace() {
                     Appearance:
                   </span>{" "}
                   {event.appearance_mode}
-                </div>
-              ) : null}
-              {event?.find_me_notes ? (
-                <div>
-                  <span className="font-black text-cyan-300">
-                    How to find Dusk:
-                  </span>
-                  <div className="mt-1 whitespace-pre-wrap">
-                    {event.find_me_notes}
-                  </div>
                 </div>
               ) : null}
               {prep?.notes ? (
@@ -800,6 +809,46 @@ export function Alpha8ConventionWorkspace() {
           ) : null}
 
           <div className="rounded-3xl border border-white/10 bg-[#0c1727] p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-black text-white">Automatic Readiness</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  55% tasks · 35% budget · 10% packing
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-3xl font-black text-cyan-300">
+                  {metrics?.readinessScore ?? prep?.readiness_score ?? 0}%
+                </div>
+                <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">
+                  ready
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 text-xs">
+              {[
+                ["Tasks", metrics?.taskReadinessScore ?? 0, "55%"],
+                ["Budget", metrics?.budgetReadinessScore ?? 0, "35%"],
+                ["Packing", metrics?.packingReadinessScore ?? 0, "10%"],
+              ].map(([label, value, weight]) => (
+                <div key={String(label)}>
+                  <div className="mb-1 flex justify-between gap-4">
+                    <span className="font-bold text-slate-300">{label}</span>
+                    <span className="text-slate-500">{value}% · {weight}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-cyan-300"
+                      style={{ width: `${value}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-[#0c1727] p-5">
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-black text-white">Quick details</div>
               <EditButton
@@ -810,7 +859,7 @@ export function Alpha8ConventionWorkspace() {
             </div>
             <dl className="mt-3 grid gap-3 text-xs">
               <div className="flex justify-between gap-4">
-                <dt className="text-slate-500">Status</dt>
+                <dt className="text-slate-500">Lifecycle</dt>
                 <dd className="font-bold text-slate-200">
                   {prep?.status ?? currentOption.status}
                 </dd>
@@ -855,6 +904,7 @@ export function Alpha8ConventionWorkspace() {
           conPrepId={selected}
           mode={editor.mode}
           record={editor.record ?? null}
+          tasks={summary?.tasks ?? []}
           onClose={() => setEditor(null)}
           onSaved={refresh}
         />

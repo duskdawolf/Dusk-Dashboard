@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Upcoming events should be created through Convention Ops so the deployment workspace is created with them.",
+            "Upcoming events should be created through Deployment Ops so the deployment workspace is created with them.",
         },
         { status: 400 },
       );
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "That event is not in the past yet. Add upcoming events through Convention Ops.",
+            "That event is not in the past yet. Add upcoming events through Deployment Ops.",
         },
         { status: 400 },
       );

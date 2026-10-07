@@ -283,7 +283,7 @@ export function ConventionOpsHome({
           Pick a convention, hit{" "}
           <strong className="text-white">I&apos;M GOING</strong>,
           and Dusk creates the event, Tactical Deployment Plan,
-          Convention Ops workspace, baseline loadouts, nested tasks,
+          Deployment Ops workspace, baseline loadouts, nested tasks,
           readiness tracking, and a deployment-scoped Chaos Copilot™
           context.
         </p>

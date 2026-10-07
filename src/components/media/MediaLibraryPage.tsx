@@ -96,7 +96,7 @@ export function MediaLibraryPage() {
             href="/dashboard/con-prep"
             className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-200"
           >
-            Convention Ops
+            Deployment Ops
           </Link>
         </div>
       </header>
