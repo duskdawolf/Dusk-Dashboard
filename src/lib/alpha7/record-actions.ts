@@ -137,7 +137,6 @@ const ALLOWED: Record<Alpha7ActionType, Set<string>> = {
     "prep_deadline_at",
     "departure_at",
     "prep_complete_by",
-    "ai_summary",
   ]),
 };
 

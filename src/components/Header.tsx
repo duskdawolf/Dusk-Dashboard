@@ -1,9 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { NotificationBell } from "@/components/NotificationBell";
+import { DeploymentsNav } from "@/components/DeploymentsNav";
 
 const links = [
-  { href: "/chaos", label: "Chaos" },
   { href: "/sticker-factory", label: "Sticker Factory" },
   { href: "/shop", label: "Shop" },
   { href: "/donk-toss", label: "Donk Toss" },
@@ -29,6 +29,7 @@ export function Header() {
         </Link>
 
         <nav className="hidden gap-5 text-sm text-slate-400 lg:flex">
+          <DeploymentsNav />
           {links.map((link) => (
             <Link
               key={link.href}

@@ -182,8 +182,6 @@ export function Alpha8WorkspaceEditor(props: Props) {
             prep_deadline_at: isoOrNull(data.get("prep_deadline_at")),
             packing_deadline: isoOrNull(data.get("packing_deadline")),
             notes: String(data.get("notes") ?? "").trim() || null,
-            ai_summary:
-              String(data.get("ai_summary") ?? "").trim() || null,
           };
           break;
 
@@ -339,7 +337,7 @@ export function Alpha8WorkspaceEditor(props: Props) {
   return (
     <WorkspaceSheet
       title={`${creating && !["event", "readiness"].includes(props.mode) ? "Add " : ""}${modeTitle[props.mode]}`}
-      subtitle="Changes save directly to Deployment Ops."
+      subtitle="Changes save directly to Convention Ops."
       onClose={props.onClose}
     >
       <form onSubmit={submit} className="grid gap-4">
@@ -401,7 +399,6 @@ export function Alpha8WorkspaceEditor(props: Props) {
               <Field label="Packing deadline" name="packing_deadline" type="datetime-local" defaultValue={localDateTime(record.packing_deadline)} />
             </div>
             <Area label="Prep notes" name="notes" defaultValue={record.notes} />
-            <Area label="Readiness summary" name="ai_summary" defaultValue={record.ai_summary} />
           </>
         ) : null}
 

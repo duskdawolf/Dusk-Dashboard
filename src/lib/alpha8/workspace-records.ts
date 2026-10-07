@@ -100,7 +100,6 @@ const CONFIG = {
   prep: {
     table: "con_preps",
     allowed: [
-      "status",
       "target_arrival_at",
       "leave_for_airport_at",
       "packing_deadline",
@@ -108,7 +107,6 @@ const CONFIG = {
       "prep_deadline_at",
       "departure_at",
       "prep_complete_by",
-      "ai_summary",
     ],
   },
   event: {

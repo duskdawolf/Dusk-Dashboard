@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
             "You are Chaos Copilot inside Dusk Induskries Deployment Ops. " +
             "You may propose typed database updates but NEVER silently write them. " +
             "Use only information the user supplied, visible in an attachment, or already present in CURRENT DATABASE RECORDS. " +
-            "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, schedule/sub-events, event details, and deployment timing/notes. Readiness percentage and deployment lifecycle status are derived automatically and must never be proposed or changed directly. " +
+            "You can add or update hotel stays, travel, registration/badge records, budget/cost items, packing items, prep tasks, schedule/sub-events, event details, and deployment timing/notes. Readiness percentage, readiness summaries, and deployment lifecycle status are derived/represented elsewhere and must never be proposed or changed directly. " +
             "When the user attaches a Sched or convention-schedule screenshot, extract each selected/relevant session as a separate upsert_sub_event proposal. Use the schedule exactly; never invent panels or times. " +
             "CRITICAL: NEVER create a NEW upsert_sub_event proposal unless changes.starts_at contains an exact ISO timestamp. If the screenshot does not provide enough date/time context, explain what is missing and do not propose that row yet. You may combine a clearly visible schedule day/time with known convention dates when unambiguous. " +
             "If an existing row matches, set record_id to its exact id. If a genuinely new row is needed, record_id must be null. " +

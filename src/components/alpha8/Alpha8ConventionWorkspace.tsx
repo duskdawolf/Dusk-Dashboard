@@ -402,10 +402,7 @@ export function Alpha8ConventionWorkspace() {
         <main className="grid gap-4">
           <DisclosureCard
             title="Readiness"
-            summary={
-              prep?.ai_summary ||
-              `${readiness}% ready · ${metrics?.openTaskCount ?? 0} open tasks`
-            }
+            summary={`${readiness}% ready · ${metrics?.openTaskCount ?? 0} open tasks`}
             defaultOpen
             actions={
               <EditButton
@@ -437,11 +434,6 @@ export function Alpha8ConventionWorkspace() {
                 </div>
               </div>
             </div>
-            {prep?.ai_summary ? (
-              <p className="mt-4 text-sm leading-6 text-slate-300">
-                {prep.ai_summary}
-              </p>
-            ) : null}
           </DisclosureCard>
 
           <DisclosureCard
@@ -807,46 +799,6 @@ export function Alpha8ConventionWorkspace() {
               <Alpha8NextStopCard eventId={event.id} />
             </div>
           ) : null}
-
-          <div className="rounded-3xl border border-white/10 bg-[#0c1727] p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-sm font-black text-white">Automatic Readiness</div>
-                <div className="mt-1 text-xs text-slate-500">
-                  55% tasks · 35% budget · 10% packing
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-black text-cyan-300">
-                  {metrics?.readinessScore ?? prep?.readiness_score ?? 0}%
-                </div>
-                <div className="text-[9px] font-black uppercase tracking-wider text-slate-600">
-                  ready
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 text-xs">
-              {[
-                ["Tasks", metrics?.taskReadinessScore ?? 0, "55%"],
-                ["Budget", metrics?.budgetReadinessScore ?? 0, "35%"],
-                ["Packing", metrics?.packingReadinessScore ?? 0, "10%"],
-              ].map(([label, value, weight]) => (
-                <div key={String(label)}>
-                  <div className="mb-1 flex justify-between gap-4">
-                    <span className="font-bold text-slate-300">{label}</span>
-                    <span className="text-slate-500">{value}% · {weight}</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
-                    <div
-                      className="h-full rounded-full bg-cyan-300"
-                      style={{ width: `${value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="rounded-3xl border border-white/10 bg-[#0c1727] p-5">
             <div className="flex items-center justify-between gap-3">
