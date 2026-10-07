@@ -1,3 +1,5 @@
+> Current implementation documentation: [docs/README.md](docs/README.md). The release notes below are historical and include superseded setup and architecture descriptions. The [Alpha v31.2 Convention Directory specification](docs/product-specs/alpha-v31.2-convention-directory.md) is planned functionality.
+
 # Dusk Industries™ v26 Alpha — Convention Ops + CHAOS COPILOT™
 
 v26 Alpha rebuilds the broken Con Prep area into Convention Operations and
