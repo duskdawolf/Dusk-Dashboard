@@ -1,3 +1,5 @@
+import { DeploymentImage } from "@/components/convention-directory/DeploymentImage";
+import { ConventionInformation } from "@/components/convention-directory/ConventionInformation";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DeploymentFilterLink } from "@/components/DeploymentFilterLink";
@@ -36,9 +38,7 @@ function metricTotal(post: {
     engagements: number;
   }>(
     (totals, platform) => ({
-      reach:
-        totals.reach +
-        (platform.reach ?? platform.impressions ?? 0),
+      reach: totals.reach + (platform.reach ?? platform.impressions ?? 0),
       engagements:
         totals.engagements +
         (platform.likes ?? 0) +
@@ -67,9 +67,7 @@ export default async function DeploymentPage({
 
   if (lifecycle === "deployment") {
     try {
-      whereToFind = (
-        await buildWhereToFindDusk(event.id)
-      ).publicLines;
+      whereToFind = (await buildWhereToFindDusk(event.id)).publicLines;
     } catch {
       whereToFind = [];
     }
@@ -81,11 +79,22 @@ export default async function DeploymentPage({
         href={`/deployments/${mode}`}
         className="text-sm font-black text-dusk-aqua"
       >
-        ← {lifecycle === "case_study"
+        ←{" "}
+        {lifecycle === "case_study"
           ? "BACK TO CASE STUDIES"
           : "BACK TO TACTICAL DEPLOYMENT PLANS"}
       </Link>
 
+      <DeploymentImage
+        images={event.imageCandidates}
+        alt={event.title}
+        className="mt-8 max-h-[480px] w-full rounded-3xl object-cover"
+      />
+      {event.convention ? (
+        <div className="mt-6">
+          <ConventionInformation edition={event.convention} />
+        </div>
+      ) : null}
       <div className="mt-8 grid gap-7 lg:grid-cols-[1.2fr_.8fr]">
         <div>
           <div className="eyebrow">
@@ -108,14 +117,8 @@ export default async function DeploymentPage({
           </p>
 
           <div className="mt-5 flex flex-wrap gap-2">
-            <DeploymentFilterLink
-              mode={mode}
-              value={event.tag}
-            />
-            <DeploymentFilterLink
-              mode={mode}
-              value={event.eventType}
-            />
+            <DeploymentFilterLink mode={mode} value={event.tag} />
+            <DeploymentFilterLink mode={mode} value={event.eventType} />
             <DeploymentFilterLink
               mode={mode}
               value={event.quarter.toUpperCase()}
@@ -148,9 +151,7 @@ export default async function DeploymentPage({
         <section className="mt-10 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <div className="panel">
             <div className="eyebrow">Tactical brief</div>
-            <h2 className="text-3xl font-black">
-              Deployment Plan
-            </h2>
+            <h2 className="text-3xl font-black">Deployment Plan</h2>
             <p className="mt-4 leading-7 text-slate-400">
               This is the public forward-looking record for the deployment.
               Operational planning remains live until the event concludes.
@@ -159,9 +160,7 @@ export default async function DeploymentPage({
 
           <div className="panel">
             <div className="eyebrow">Public appearance data</div>
-            <h2 className="text-2xl font-black">
-              Where to Find Dusk
-            </h2>
+            <h2 className="text-2xl font-black">Where to Find Dusk</h2>
 
             {whereToFind.length ? (
               <div className="mt-4 grid gap-2">
@@ -201,9 +200,7 @@ export default async function DeploymentPage({
               </div>
               <div className="card">
                 <div className="eyebrow">Damage Report</div>
-                <h2 className="mt-2 text-xl font-black">
-                  {caseStudy.outcome}
-                </h2>
+                <h2 className="mt-2 text-xl font-black">{caseStudy.outcome}</h2>
               </div>
             </section>
           ) : (
@@ -218,21 +215,14 @@ export default async function DeploymentPage({
           <section className="mt-12">
             <div className="eyebrow">Exhibit A</div>
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="text-4xl font-black">
-                Photographic Evidence
-              </h2>
-              <span className="tag !mt-0">
-                {media.length} archived files
-              </span>
+              <h2 className="text-4xl font-black">Photographic Evidence</h2>
+              <span className="tag !mt-0">{media.length} archived files</span>
             </div>
 
             {media.length ? (
               <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {media.map((item) => (
-                  <figure
-                    key={item.id}
-                    className="card overflow-hidden"
-                  >
+                  <figure key={item.id} className="card overflow-hidden">
                     <div className="aspect-square overflow-hidden rounded-2xl bg-black/30">
                       {item.kind === "image" ? (
                         <img
@@ -270,12 +260,8 @@ export default async function DeploymentPage({
           <section className="mt-12">
             <div className="eyebrow">Exhibit B</div>
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <h2 className="text-4xl font-black">
-                Social Media Receipts
-              </h2>
-              <span className="tag !mt-0">
-                {posts.length} published posts
-              </span>
+              <h2 className="text-4xl font-black">Social Media Receipts</h2>
+              <span className="tag !mt-0">{posts.length} published posts</span>
             </div>
 
             {posts.length ? (
@@ -285,9 +271,7 @@ export default async function DeploymentPage({
 
                   return (
                     <article key={post.id} className="card">
-                      <h3 className="text-xl font-black">
-                        {post.title}
-                      </h3>
+                      <h3 className="text-xl font-black">{post.title}</h3>
 
                       <p className="mt-3 whitespace-pre-wrap text-sm text-slate-300">
                         {post.caption}
@@ -326,10 +310,7 @@ export default async function DeploymentPage({
                               {platform.platform} ↗
                             </a>
                           ) : (
-                            <span
-                              key={platform.platform}
-                              className="tag !mt-0"
-                            >
+                            <span key={platform.platform} className="tag !mt-0">
                               {platform.platform}
                             </span>
                           ),
@@ -341,8 +322,8 @@ export default async function DeploymentPage({
               </div>
             ) : (
               <div className="panel mt-6 text-slate-400">
-                No published social receipts are associated with this
-                deployment yet.
+                No published social receipts are associated with this deployment
+                yet.
               </div>
             )}
           </section>

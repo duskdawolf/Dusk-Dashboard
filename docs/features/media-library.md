@@ -2,7 +2,7 @@
 
 Status: **CURRENT IMPLEMENTATION**. The library stores reusable assets; event
 attachments and social-post attachments record how those assets are used.
-The Alpha v31.2 edition banner/logo hierarchy is planned, not implemented here.
+Alpha v31.2 reuses this library for Series logos and Edition banners/logos; see [Convention Directory](convention-directory.md) for public image selection and privacy.
 
 ## Entry points and asset records
 
@@ -96,13 +96,12 @@ confirmations, private travel documents or other secrets to this library.
 - [Public detail loader](../../src/lib/incident-report.ts) prefers published
   `event_media` assets, falling back to published legacy media when none remain.
 - [Public Case Study media API](../../src/app/api/case-studies/[slug]/media/route.ts)
-  gates on a published Case Study but returns its attachment media without a
-  `media.published` check. Treat attaching to a public Case Study as disclosure.
+  requires a published Case Study, published parent event and published attachment media.
 - A Case Study hero URL may disclose an image independently of gallery filters.
 
 Prerequisites include base `media`, [Ops storage/caption fields](../../supabase/migrations/20260921_ops_media_posts_conprep.sql),
 [v26 ownership fields](../../supabase/migrations/20260923_v26_alpha_chaos_ops.sql), [Alpha 9.1 library/tags](../../supabase/V26_ALPHA91_MEDIA_TAGS_FIX_RUN_THIS.sql),
 and [Alpha 9.2 joins](../../supabase/V26_ALPHA92_UNIFIED_EVENT_LIFECYCLE_RUN_THIS.sql).
 See [public pages](public-deployment-pages.md) for publication boundaries and
-[Alpha v31.2 planned directory](../product-specs/alpha-v31.2-convention-directory.md)
-for future image fallback requirements.
+[Alpha v31.2 directory specification](../product-specs/alpha-v31.2-convention-directory.md)
+for the implemented image fallback requirements. Directory media selections require published images and never alter user-selected event features.

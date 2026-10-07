@@ -1,8 +1,6 @@
+import { conventionForDeployment } from "@/lib/convention-directory/server";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  alpha7ErrorResponse,
-  requireAlpha7Admin,
-} from "@/lib/alpha7/auth";
+import { alpha7ErrorResponse, requireAlpha7Admin } from "@/lib/alpha7/auth";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
 import {
   ensureCaseStudy,
@@ -14,7 +12,10 @@ import {
 function parseTags(value: unknown) {
   return Array.from(
     new Set(
-      (Array.isArray(value) ? value.map(String) : String(value ?? "").split(","))
+      (Array.isArray(value)
+        ? value.map(String)
+        : String(value ?? "").split(",")
+      )
         .map((tag) => tag.trim())
         .filter(Boolean),
     ),
@@ -25,7 +26,8 @@ export async function GET(request: NextRequest) {
   try {
     const user = await requireAlpha7Admin();
     const scope = request.nextUrl.searchParams.get("scope") ?? "upcoming";
-    const tag = request.nextUrl.searchParams.get("tag")?.trim().toLowerCase() ?? "";
+    const tag =
+      request.nextUrl.searchParams.get("tag")?.trim().toLowerCase() ?? "";
     const q = request.nextUrl.searchParams.get("q")?.trim().toLowerCase() ?? "";
 
     const supabase = createAlpha7SupabaseAdmin();
@@ -50,10 +52,7 @@ export async function GET(request: NextRequest) {
             .from("case_studies")
             .select("id,event_id,status,published,image_url")
             .in("event_id", ids),
-          supabase
-            .from("event_media")
-            .select("event_id")
-            .in("event_id", ids),
+          supabase.from("event_media").select("event_id").in("event_id", ids),
         ])
       : [
           { data: [], error: null },
@@ -132,7 +131,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAlpha7Admin();
-    const body = await request.json();
+    const body = await conventionForDeployment(
+      createAlpha7SupabaseAdmin(),
+      await request.json().catch(() => null),
+    );
 
     if (body.mode !== "past") {
       return NextResponse.json(
@@ -190,6 +192,7 @@ export async function POST(request: NextRequest) {
         tag: tags[0] ?? "Event",
         tags,
         event_type: eventType,
+        convention_edition_id: body.convention_edition_id,
         quarter: quarterFor(startAt),
         state_code: String(body.state_code ?? "").trim() || null,
         published: Boolean(body.published ?? true),

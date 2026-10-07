@@ -1,6 +1,6 @@
 # Dusk Dashboard knowledge base
 
-**Current baseline:** Alpha v31.1, repository commit `d84c25e` (`Alpha v31.1 Hotfix`). These pages were checked against application code and the SQL files in this checkout. They describe available code and migration definitions, not proof that a hosted database, provider or cron job has been configured.
+**Current baseline:** Alpha v31.2 — Convention Directory. These pages describe checked-in implementation and SQL. Hosted activation still requires applying the migration, reviewing imported records and configuring official sources; see [release notes](releases/alpha-v31.2.md).
 
 ## Start here
 
@@ -16,6 +16,7 @@
 
 | Topic | Document |
 | --- | --- |
+| Official Series/Edition directory, review and refresh | [Convention Directory](features/convention-directory.md) |
 | Event identity and deployment lifecycle | [Events / Deployments](features/events-deployments.md) |
 | Personal planning workspace | [Deployment Ops](features/deployment-ops.md) |
 | Scores, state transitions and competing legacy paths | [Readiness and automatic lifecycle](features/readiness-lifecycle.md) |
@@ -26,9 +27,9 @@
 | Reusable assets and event attachments | [Media Library](features/media-library.md) |
 | Tactical Deployment Plans and Case Studies | [Public deployment pages](features/public-deployment-pages.md) |
 
-## Planned product work
+## Product specification
 
-[Alpha v31.2 Convention Directory](product-specs/alpha-v31.2-convention-directory.md) is **PLANNED**. Its normalized Series/Edition directory, official hotels, restricted convention selection and refresh/discovery workflows are requirements for future implementation. No application or database changes accompany this specification.
+[Alpha v31.2 Convention Directory](product-specs/alpha-v31.2-convention-directory.md) records the implemented requirements and acceptance mapping. Operational scope and remaining source-adapter limitations are in the [feature guide](features/convention-directory.md).
 
 ## Reading conventions
 

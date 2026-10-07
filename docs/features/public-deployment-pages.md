@@ -1,8 +1,8 @@
 # Public Tactical Deployment Plans and Case Studies
 
 Status: **CURRENT IMPLEMENTATION**. Public archives and detail pages are read-only
-views of published events and public evidence. Alpha v31.2 official convention
-information and edition/series image fallbacks remain planned.
+views of published events and public evidence. Alpha v31.2 adds verified official
+convention information and shared edition/series image fallbacks.
 
 ## Routes and lifecycle presentation
 
@@ -26,25 +26,19 @@ sweep has run or a Case Study has been written/published.
 Archive `tag` filtering matches the displayed legacy tag, event type or quarter,
 case-insensitively. Cards link with the **event slug**; a linked Case Study's own
 slug may differ. [Archive card](../../src/components/DeploymentArchiveCard.tsx)
-uses Case Study image, otherwise first published legacy event image, otherwise
-the generic paw placeholder. New `event_media` joins are not directly counted
-or queried by the archive; hero sync may still supply its Case Study image.
+uses the shared featured → edition banner → edition logo → series logo → placeholder chain for conventions, including broken-image fallthrough. Non-con cards retain public Case Study/legacy image fallback. Counts still use legacy associations; detail galleries use modern attachments.
 
 ## Public data sources and fallbacks
 
 [Repository layer](../../src/lib/repository.ts) creates a publishable-key Supabase
 client without persisted auth. Events and Case Studies are filtered by their
-own `published=true`; base [RLS policies](../../supabase/schema.sql) also permit
-public reads of published rows. The layer falls back independently to
-[sample data](../../src/data/seed.ts) when public Supabase configuration is missing,
-a query fails, **or a result is empty**. Therefore an empty/unavailable live
-database can display sample deployments rather than an empty archive.
+own `published=true`; linked Case Studies additionally require a returned published event. Events use an explicit public field selection and directory/media views. Sample events/Case Studies are used only without public configuration; a configured empty/error query returns no records.
 
 Case Studies match an event first by `event_id`, then by shared slug. A published
 event can have no published Case Study. Historical pages still exist in that
 case and show analysis pending. An unpublished linked Case Study is not required
 for an event to enter the past archive; automatic draft creation is not public
-publication. Empty Case Study queries also trigger the sample fallback.
+publication. Empty configured Case Study queries remain empty.
 
 After locating the public event, [incident-report](../../src/lib/incident-report.ts)
 uses the server secret client, when configured, to load:
@@ -86,7 +80,7 @@ notes, Case Study text, captions and social master captions are public content
 when their containing records are published.
 
 This is a rendering boundary, not a claim that published database rows expose
-only mapped columns: base public RLS permits row reads, and events use `select(*)`.
+only mapped columns: base public RLS still permits row reads, though the repository now selects explicit event fields.
 Do not add private planning columns to a publicly readable event row without
 reviewing database permissions and projections. Secret-client child readers
 bypass RLS, so their explicit parent gate and field/filter choices matter.
@@ -94,8 +88,7 @@ bypass RLS, so their explicit parent gate and field/filter choices matter.
 Current limitations requiring care:
 
 - [Public Case Study media endpoint](../../src/app/api/case-studies/[slug]/media/route.ts)
-  checks `case_studies.published` but not parent event publication or attached
-  `media.published`. It can disclose attachment metadata for such a Case Study.
+  requires a published Case Study, a published parent event and published attached media.
 - `public-media` object URLs are public regardless of database publish flags.
   Hero sync also selects images without a published filter; see [Media Library](media-library.md).
 - Social posts appear once their parent is published; staged platform entries
@@ -110,5 +103,4 @@ requires event ownership, creates drafts, and edits public text/publish state.
 The [v31 lifecycle SQL](../../supabase/ALPHA_V31_DEPLOYMENT_AUTOMATION_RUN_THIS.sql)
 can ensure a completion draft but does not automatically publish it.
 
-The official-directory convention section, refresh boundaries and image chain
-are specified only in [Alpha v31.2 PLANNED spec](../product-specs/alpha-v31.2-convention-directory.md).
+The official-directory section displays verified name/branding, dates, venue/city, theme, official website, registration and schedule by default. Official hotel information is opt-in per edition. No personal reservation/planning table enters the projection. See [Convention Directory](convention-directory.md).

@@ -1,12 +1,10 @@
 # Alpha v31.2 — Convention Directory
 
-**Status: PLANNED — not implemented.** This document records product requirements for work after Alpha v31.1. Proposed entities and workflows below are conceptual; no new tables, endpoints, UI or refresh jobs are delivered by this documentation change.
+**Status: IMPLEMENTED IN SOURCE — Alpha v31.2.** Hosted availability requires the migration, official-source review and operational setup in [release notes](../releases/alpha-v31.2.md). [Convention Directory](../features/convention-directory.md) documents actual tables, APIs, review workflows, supported ingestion formats and limitations. This remains the product contract; checked-in code is not proof that production SQL/Cron was activated.
 
-## Purpose and current baseline
+## Purpose and baseline
 
-Make the official convention directory the authority for convention facts while retaining Deployment as the universal object for the user's attendance and planning. A deployment may represent a convention, meetup, hosted activity or another non-con event.
-
-Today the repository has a flat `convention_catalog`, a bundled WikiFur snapshot and an AI-assisted event discovery endpoint. The active Add Deployment form accepts editable facts and sets `event_type: "convention"`; it does not require an official edition. Catalog sync reloads bundled data, and its `verified_at` timestamp does not establish a fresh official-source check. Personal lodging is stored in `hotel_stays`. There are no normalized Series/Edition records or official multi-hotel directory/refresh jobs. See [Events / Deployments](../features/events-deployments.md), [Deployment Ops](../features/deployment-ops.md) and [data model](../data-model.md).
+Deployment (`events`) remains universal. Series/Edition directory records own official convention facts, while reservations and personal planning remain in the existing workspace tables. The former flat `convention_catalog` is preserved as legacy evidence and imported for review, never automatically relabeled official.
 
 ## Product invariants
 
@@ -15,9 +13,9 @@ Today the repository has a flat `convention_catalog`, a bundled WikiFur snapshot
 3. **Deployment Ops cannot create Convention Editions.** Users select existing official editions. A missing edition can trigger directory discovery/review, but the Add Deployment form must not offer a manual edition-creation bypass.
 4. **Directory facts and personal plans have separate ownership and write paths.** Refreshing or discovering official data must never overwrite personal planning.
 
-## Conceptual data model
+## Product data model
 
-The names below are product concepts, not committed SQL names or a migration design.
+The concepts below are implemented by normalized tables documented in the [directory feature guide](../features/convention-directory.md).
 
 | Concept | Responsibility and relationship |
 | --- | --- |
@@ -76,7 +74,7 @@ Use this exact fallback order for convention deployment imagery:
 4. Series logo.
 5. Generic placeholder.
 
-The featured image remains a personal selection and survives directory updates. Only images eligible for the destination's visibility may be used; a private featured asset must not become public through a fallback resolver. Missing or unusable images proceed to the next eligible source. This directory fallback is planned and differs from today's public cover behavior.
+The featured image remains a personal selection and survives directory updates. Only images eligible for the destination's visibility may be used; a private featured asset must not become public through a fallback resolver. Missing or unusable images proceed to the next eligible source. This shared fallback is implemented on public deployment/homepage/Case Study surfaces.
 
 ## Public/private contract
 
@@ -84,17 +82,31 @@ Public Tactical Deployment Plans and Case Studies may expose a curated subset of
 
 They must **never** expose personal reservations or confirmation numbers, private travel, budget, packing or internal tasks. This applies to API payloads, server-component serialization, metadata, public storage and generated images as well as visible HTML. Never publish a joined planning row or a full Deployment Ops summary. An official hotel's published address/booking link is directory information; a user's room booking and confirmation are personal data.
 
-Existing public-storage and endpoint-filter gaps documented in [security](../security.md) are not solved by this specification. Implementation must enforce the new boundary at each read/render/generated-asset path it changes and must not claim privacy solely because a component omits a field.
+The public Case Study attachment filter gap is fixed in v31.2; public-storage URL visibility remains documented in [security](../security.md). Implementation must enforce the new boundary at each read/render/generated-asset path it changes and must not claim privacy solely because a component omits a field.
 
-## Migration and operational decisions still required
+## Agreed automation and public defaults
 
-- Identify and map existing flat catalog rows and manually entered convention deployments to official Series/Edition records. Preserve IDs, links, history and personal plans; unresolved mappings need a review path before enforcing the new required reference on legacy records.
-- Define controlled directory administration, candidate verification, source ingestion rules and correction/audit permissions outside Deployment Ops.
-- Define identity/year handling, cancellation/postponement behavior and the policy for stale or incomplete official editions.
-- Choose refresh cadence, discovery sources, on-demand latency/cost limits and scheduler placement. The existing tick/Cron code does not already implement these jobs.
-- Design compatible additive schema/API changes and a reviewed backfill/enforcement sequence. No directory migration is specified as already executable here.
+- Refresh known upcoming verified editions twice daily; perform broader configured-source discovery weekly; allow on-demand checks from Add Deployment and Convention Information.
+- Secondary evidence creates candidates only. Approved official websites or specific official social accounts can verify an edition. Identity conflicts require review and never overwrite a verified occurrence silently.
+- Retain source identity, confidence/verification, refresh attempts and before/after change history. Material date/venue/status/registration/schedule/policy/hotel changes and review-required exceptions create deduplicated Dashboard notifications; no-op/minor checks do not spam.
+- Public defaults include edition name/branding, dates, city/venue, theme, official website, registration information/link and official schedule link. **Official hotels require explicit public opt-in.** Personal planning is never part of the projection.
+- Backfill preserves existing event IDs and all personal planning. Exact legacy exceptions keep unresolved records editable; new/relinked conventions require verified editions. Review, source approval, candidate resolution and mapping are available outside Deployment Ops without raw SQL.
 
-## Acceptance criteria for future implementation
+## Implementation and acceptance mapping
+
+| Contract | Implementation / verification |
+| --- | --- |
+| Universal deployments and directory-only convention creation | Add/Past/Edit flows; server resolver and database guard; creation and SQL tests |
+| Series, occurrence facts, multiple hotels, source/media reuse | Normalized migration and internal directory manager; migration and hotel tests |
+| Provenance, review and conservative identity handling | Approved sources, candidate queue, aliases, source timestamps and audit history; worker tests |
+| Automatic and on-demand freshness without plan writes | Existing tick, leased worker, per-edition RPC; cadence/failure/SQL preservation tests |
+| Meaningful change notifications | Material-field/hotel comparison and deduplicated Dashboard notices; no-op SQL tests |
+| Public defaults, hotel opt-in and image fallback/privacy | Public views, shared resolver/image component, gallery parent/asset gates; SQL/model checks |
+| Legacy continuity and deployment setup | Additive backfill plus admin mapping; rerun/preservation tests and release notes |
+
+Remaining operational/source-adapter limitations are explicitly recorded in [release notes](../releases/alpha-v31.2.md).
+
+## Acceptance criteria
 
 - A non-con deployment can be created and edited manually without a directory link.
 - A new or changed convention deployment is rejected unless it references a valid official Edition; Add Deployment has no manual Edition-creation path.

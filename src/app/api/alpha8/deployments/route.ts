@@ -1,9 +1,7 @@
+import { conventionForDeployment } from "@/lib/convention-directory/server";
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  alpha7ErrorResponse,
-  requireAlpha7Admin,
-} from "@/lib/alpha7/auth";
+import { alpha7ErrorResponse, requireAlpha7Admin } from "@/lib/alpha7/auth";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
 
 function slugify(value: string) {
@@ -25,7 +23,10 @@ function quarterFor(value: string) {
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAlpha7Admin();
-    const body = await request.json();
+    const body = await conventionForDeployment(
+      createAlpha7SupabaseAdmin(),
+      await request.json().catch(() => null),
+    );
 
     const title = String(body.title ?? "").trim();
     const startAt = String(body.start_at ?? "").trim();
@@ -38,8 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createAlpha7SupabaseAdmin();
-    const slug =
-      `${slugify(title) || "event"}-${new Date(startAt).getUTCFullYear()}-${randomUUID().slice(0, 6)}`;
+    const slug = `${slugify(title) || "event"}-${new Date(startAt).getUTCFullYear()}-${randomUUID().slice(0, 6)}`;
 
     const { data: event, error: eventError } = await supabase
       .from("events")
@@ -51,8 +51,12 @@ export async function POST(request: NextRequest) {
         location: body.location || null,
         description: body.description || null,
         tags: Array.isArray(body.tags) ? body.tags : [],
-        tag: body.tag || (Array.isArray(body.tags) ? body.tags[0] : null) || "Convention",
-        event_type: body.event_type || "convention",
+        tag:
+          body.tag ||
+          (Array.isArray(body.tags) ? body.tags[0] : null) ||
+          "Convention",
+        event_type: body.event_type,
+        convention_edition_id: body.convention_edition_id,
         quarter: quarterFor(startAt),
         state_code: body.state_code || null,
         published: Boolean(body.published ?? false),

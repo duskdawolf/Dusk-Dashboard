@@ -1,3 +1,4 @@
+import { DeploymentImage } from "@/components/convention-directory/DeploymentImage";
 import Link from "next/link";
 import type { EventItem } from "@/types";
 
@@ -22,6 +23,11 @@ export function EventCard({ event }: { event: EventItem }) {
       href={`/chaos/${event.slug}`}
       className="card group block transition hover:-translate-y-1 hover:border-dusk-aqua/35"
     >
+      <DeploymentImage
+        images={event.imageCandidates}
+        alt={event.title}
+        className="mb-4 aspect-video w-full rounded-xl object-cover"
+      />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="eyebrow">{formatDate(event.startAt)}</div>
         <span

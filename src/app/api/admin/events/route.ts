@@ -11,6 +11,7 @@ import { notifyAdmins } from "@/lib/notifications";
 const EventTypeSchema = z.enum(["convention", "meetup", "hosting", "public"]);
 
 const EventCreateSchema = z.object({
+  conventionEditionId: z.string().uuid().nullable().optional(),
   title: z.string().min(1).max(160),
   slug: z.string().max(180).optional().default(""),
   startAt: z.string().datetime({ offset: true }),
@@ -57,12 +58,13 @@ export async function GET() {
   const { data, error } = await supabase
     .from("events")
     .select("*")
+    .or(`owner_user_id.eq.${user.id},owner_user_id.is.null`)
     .order("start_at", { ascending: true });
 
   if (error) {
     return NextResponse.json(
       { error: "Could not load events.", detail: error.message },
-      { status: 500 }
+      { status: error.code?.startsWith("23") ? 400 : 500 },
     );
   }
 
@@ -81,17 +83,19 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid event.", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   const input = parsed.data;
-  const slug = input.slug || slugify(`${input.title}-${input.startAt.slice(0, 10)}`);
+  const slug =
+    input.slug || slugify(`${input.title}-${input.startAt.slice(0, 10)}`);
 
   const supabase = createAdminSupabaseClient();
   const { data, error } = await supabase
     .from("events")
     .insert({
+      owner_user_id: user.id,
       title: input.title,
       slug,
       start_at: input.startAt,
@@ -103,6 +107,7 @@ export async function POST(request: Request) {
       description: input.description || null,
       tag: input.tag || "Event",
       event_type: input.eventType,
+      convention_edition_id: input.conventionEditionId ?? null,
       quarter: quarterFromIso(input.startAt),
       published: input.published,
     })
@@ -112,7 +117,7 @@ export async function POST(request: Request) {
   if (error) {
     return NextResponse.json(
       { error: "Could not create event.", detail: error.message },
-      { status: 500 }
+      { status: error.code?.startsWith("23") ? 400 : 500 },
     );
   }
 
@@ -144,7 +149,7 @@ export async function PATCH(request: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Invalid event update.", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -164,9 +169,15 @@ export async function PATCH(request: Request) {
   }
   if (input.latitude !== undefined) patch.latitude = input.latitude;
   if (input.longitude !== undefined) patch.longitude = input.longitude;
-  if (input.description !== undefined) patch.description = input.description || null;
+  if (input.description !== undefined)
+    patch.description = input.description || null;
   if (input.tag !== undefined) patch.tag = input.tag || "Event";
-  if (input.eventType !== undefined) patch.event_type = input.eventType;
+  if (input.eventType !== undefined) {
+    patch.event_type = input.eventType;
+    if (input.eventType !== "convention") patch.convention_edition_id = null;
+  }
+  if (input.conventionEditionId !== undefined)
+    patch.convention_edition_id = input.conventionEditionId;
   if (input.published !== undefined) patch.published = input.published;
 
   const supabase = createAdminSupabaseClient();
@@ -174,13 +185,14 @@ export async function PATCH(request: Request) {
     .from("events")
     .update(patch)
     .eq("id", id)
+    .or(`owner_user_id.eq.${user.id},owner_user_id.is.null`)
     .select("*")
     .single();
 
   if (error) {
     return NextResponse.json(
       { error: "Could not update event.", detail: error.message },
-      { status: 500 }
+      { status: error.code?.startsWith("23") ? 400 : 500 },
     );
   }
 
@@ -208,19 +220,23 @@ export async function DELETE(request: Request) {
   const parsed = EventDeleteSchema.safeParse(await request.json());
 
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid delete request." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid delete request." },
+      { status: 400 },
+    );
   }
 
   const supabase = createAdminSupabaseClient();
   const { error } = await supabase
     .from("events")
     .delete()
-    .eq("id", parsed.data.id);
+    .eq("id", parsed.data.id)
+    .or(`owner_user_id.eq.${user.id},owner_user_id.is.null`);
 
   if (error) {
     return NextResponse.json(
       { error: "Could not delete event.", detail: error.message },
-      { status: 500 }
+      { status: error.code?.startsWith("23") ? 400 : 500 },
     );
   }
 

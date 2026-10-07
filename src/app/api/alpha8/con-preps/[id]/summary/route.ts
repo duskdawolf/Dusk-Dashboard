@@ -1,8 +1,6 @@
+import { getPublicEdition } from "@/lib/convention-directory/server";
 import { NextResponse } from "next/server";
-import {
-  alpha7ErrorResponse,
-  requireAlpha7Admin,
-} from "@/lib/alpha7/auth";
+import { alpha7ErrorResponse, requireAlpha7Admin } from "@/lib/alpha7/auth";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
 import { buildWhereToFindDusk } from "@/lib/alpha31/where-to-find-dusk";
 
@@ -37,13 +35,41 @@ export async function GET(
       subEventRes,
     ] = await Promise.all([
       supabase.from("events").select("*").eq("id", prep.event_id).single(),
-      supabase.from("packing_items").select("*").eq("con_prep_id", id).order("sort_order", { ascending: true }),
-      supabase.from("prep_tasks").select("*").eq("con_prep_id", id).order("sort_order", { ascending: true }),
-      supabase.from("hotel_stays").select("*").eq("con_prep_id", id).order("created_at", { ascending: true }),
-      supabase.from("travel_segments").select("*").eq("con_prep_id", id).order("created_at", { ascending: true }),
-      supabase.from("con_registrations").select("*").eq("con_prep_id", id).order("created_at", { ascending: true }),
-      supabase.from("cost_entries").select("*").eq("con_prep_id", id).order("created_at", { ascending: true }),
-      supabase.from("deployment_sub_events").select("*").eq("con_prep_id", id).order("starts_at", { ascending: true }),
+      supabase
+        .from("packing_items")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("prep_tasks")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("hotel_stays")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("travel_segments")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("con_registrations")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("cost_entries")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("deployment_sub_events")
+        .select("*")
+        .eq("con_prep_id", id)
+        .order("starts_at", { ascending: true }),
     ]);
 
     for (const result of [
@@ -81,18 +107,13 @@ export async function GET(
       [...openTasks]
         .filter((task) => task.due_at)
         .sort(
-          (a, b) =>
-            new Date(a.due_at).valueOf() -
-            new Date(b.due_at).valueOf(),
+          (a, b) => new Date(a.due_at).valueOf() - new Date(b.due_at).valueOf(),
         )[0] ?? null;
 
     const sum = (status: string) =>
       costs
         .filter((item) => item.cost_status === status)
-        .reduce(
-          (total, item) => total + Number(item.amount_cents ?? 0),
-          0,
-        );
+        .reduce((total, item) => total + Number(item.amount_cents ?? 0), 0);
 
     const budgetedCostCents = sum("budgeted");
     const paidCostCents = sum("paid");
@@ -103,6 +124,11 @@ export async function GET(
     return NextResponse.json({
       prep,
       event: eventRes.data,
+      convention: await getPublicEdition(
+        supabase,
+        eventRes.data?.convention_edition_id,
+        true,
+      ),
       packing,
       tasks,
       hotels,
@@ -118,8 +144,7 @@ export async function GET(
         taskDoneCount,
         openTaskCount: openTasks.length,
         nextTask,
-        totalCostCents:
-          budgetedCostCents + paidCostCents + unbudgetedCostCents,
+        totalCostCents: budgetedCostCents + paidCostCents + unbudgetedCostCents,
         budgetedCostCents,
         paidCostCents,
         unbudgetedCostCents,

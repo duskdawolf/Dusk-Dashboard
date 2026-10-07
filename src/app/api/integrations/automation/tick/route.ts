@@ -1,16 +1,14 @@
+import { runDirectorySweep } from "@/lib/convention-directory/server";
 import { NextRequest, NextResponse } from "next/server";
 import { createAlpha7SupabaseAdmin } from "@/lib/alpha7/supabase-admin";
 
 function authorized(request: NextRequest) {
   const expected =
-    process.env.AUTOMATION_TICK_SECRET ??
-    process.env.MAKE_WEBHOOK_SECRET;
+    process.env.AUTOMATION_TICK_SECRET ?? process.env.MAKE_WEBHOOK_SECRET;
 
   if (!expected) return false;
 
-  return (
-    request.headers.get("authorization") === `Bearer ${expected}`
-  );
+  return request.headers.get("authorization") === `Bearer ${expected}`;
 }
 
 async function callInternal(
@@ -50,15 +48,11 @@ async function callInternal(
 
 export async function POST(request: NextRequest) {
   if (!authorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const secret =
-    process.env.AUTOMATION_TICK_SECRET ??
-    process.env.MAKE_WEBHOOK_SECRET;
+    process.env.AUTOMATION_TICK_SECRET ?? process.env.MAKE_WEBHOOK_SECRET;
 
   if (!secret) {
     return NextResponse.json(
@@ -69,24 +63,31 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAlpha7SupabaseAdmin();
 
-  const { data: lifecycle, error: lifecycleError } =
-    await supabase.rpc("dusk_alpha31_lifecycle_sweep");
+  const { data: lifecycle, error: lifecycleError } = await supabase.rpc(
+    "dusk_alpha31_lifecycle_sweep",
+  );
 
-  const [reminders, socialDispatch] = await Promise.all([
+  const [reminders, socialDispatch, directory] = await Promise.all([
+    // Both existing child endpoints authenticate with MAKE_WEBHOOK_SECRET.
+
     callInternal(
       request,
       "/api/integrations/make/sub-event-reminder-sweep",
-      secret,
+      process.env.MAKE_WEBHOOK_SECRET ?? secret,
     ),
     callInternal(
       request,
       "/api/integrations/make/social-dispatch",
-      secret,
+      process.env.MAKE_WEBHOOK_SECRET ?? secret,
     ),
+    runDirectorySweep().catch(() => ({
+      ok: false,
+      error: "Directory sweep unavailable",
+    })),
   ]);
 
   const ok =
-    !lifecycleError && reminders.ok && socialDispatch.ok;
+    !lifecycleError && reminders.ok && socialDispatch.ok && directory.ok;
 
   return NextResponse.json(
     {
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
         error: lifecycleError?.message ?? null,
         deployments: lifecycle ?? [],
       },
+      directory,
       reminders,
       socialDispatch,
       ranAt: new Date().toISOString(),

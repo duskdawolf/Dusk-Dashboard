@@ -1,6 +1,6 @@
 # Data model
 
-This describes the checked-in Alpha v31.1 application and SQL, not a verified inventory of a hosted Supabase project. The application version comes from [`app-version.ts`](../src/lib/app-version.ts); the package manifest still uses an older version. Planned directory changes are in the [Alpha v31.2 specification](product-specs/alpha-v31.2-convention-directory.md).
+This describes the checked-in Alpha v31.2 application and SQL, not a verified inventory of a hosted Supabase project. The application version comes from [`app-version.ts`](../src/lib/app-version.ts); the package manifest still uses an older version. The normalized directory and backfill are documented in [Convention Directory](features/convention-directory.md).
 
 ## Core records
 
@@ -50,7 +50,7 @@ Optional ownership and legacy orphan case studies are simplified in this diagram
 
 Sources: [`schema.sql`](../supabase/schema.sql), [Alpha 9 timeline SQL](../supabase/V26_ALPHA9_DEPLOYMENT_TIMELINE_RUN_THIS.sql), [`workspace-records.ts`](../src/lib/alpha8/workspace-records.ts), [`scheduling.ts`](../src/lib/scheduling.ts).
 
-Current records do **not** include normalized `convention_series`, `convention_editions`, or attendance-history tables. `convention_catalog.series_slug` and year-bearing `events.slug` provide the current series/occurrence convention. Future series/edition/attendance entities in the v31.2 specification must not be mistaken for deployed tables.
+Alpha v31.2 adds normalized Series, Edition, official hotel, source, alias, candidate and audit tables plus `events.convention_edition_id`. See the [directory model and migration](features/convention-directory.md). An exact legacy-link exception keeps existing plans editable while their imported facts await verification; new/relinked conventions require a verified edition. Official hotels never replace `hotel_stays`.
 
 ## Other subsystems
 
@@ -93,6 +93,7 @@ The files are historical schema layers, not an interchangeable set of fresh inst
 | [Alpha v30](../supabase/ALPHA_V30_NEXT_STOP_AI_RENDER_RUN_THIS.sql) | AI wording/validation fields and background history asset type; marks existing posters stale. |
 | [Alpha v31](../supabase/ALPHA_V31_DEPLOYMENT_AUTOMATION_RUN_THIS.sql) | Stored weighted readiness, planning/packing/traveling/complete lifecycle, child triggers, sweep and case-study creation. |
 | [Alpha v31.1](../supabase/ALPHA_V31_1_SECURITY_HOTFIX_RUN_THIS.sql) | Pins helper search paths and restricts direct execution to service role; requires prior helpers to exist. |
+| [Alpha v31.2](../supabase/ALPHA_V31_2_CONVENTION_DIRECTORY_RUN_THIS.sql) | Normalized directory, preservation/backfill, verified-reference guard, public projections, review/refresh and in-app notifications; requires the existing v31.1 model |
 | [Post-deploy cron](../supabase/ALPHA_V31_ENABLE_SUPABASE_CRON_AFTER_DEPLOY.sql) | Separate production HTTP schedule using pg_cron, pg_net and Vault; not application table installation. |
 
 The v26 foundation wrapper is not a whole-project schema. Files with ` 2` suffixes are historical copies, not an extra release stage. Date ordering alone is insufficient: migrations refer to existing tables, later files change enum-like constraints, and some SQL also updates specific FurPocalypse records/default settings.

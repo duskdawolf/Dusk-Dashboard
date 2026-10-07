@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from "react";
 import { WorkspaceSheet } from "./WorkspaceSheet";
+import { EditionPicker } from "@/components/convention-directory/EditionPicker";
+import type { PublicEdition } from "@/lib/convention-directory/model";
 import { TagInput } from "@/components/alpha91/TagInput";
 
 function localDateTime(value?: string | null) {
@@ -34,33 +36,10 @@ export function Alpha8AddDeploymentSheet(props: {
   onClose: () => void;
   onCreated: (prepId: string) => Promise<void> | void;
 }) {
-  const [query, setQuery] = useState("");
-  const [found, setFound] = useState<any | null>(null);
-  const [sources, setSources] = useState<Array<{ title: string; url: string }>>([]);
-  const [searching, setSearching] = useState(false);
+  const [eventType, setEventType] = useState("convention");
+  const [found, setFound] = useState<PublicEdition | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
-  async function discover() {
-    if (!query.trim()) return;
-    setSearching(true);
-    setError("");
-    try {
-      const res = await fetch("/api/alpha9/deployments/discover", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not find event.");
-      setFound(json.found);
-      setSources(json.sources ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not find event.");
-    } finally {
-      setSearching(false);
-    }
-  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -75,7 +54,8 @@ export function Alpha8AddDeploymentSheet(props: {
         end_at: iso(data.get("end_at")),
         location: String(data.get("location") ?? "").trim() || null,
         state_code: String(data.get("state_code") ?? "").trim() || null,
-        event_type: "convention",
+        event_type: eventType,
+        convention_edition_id: eventType === "convention" ? found?.id : null,
         tags: parseTags(data.get("tags")),
         tag: parseTags(data.get("tags"))[0] ?? "Convention",
         event_theme: String(data.get("event_theme") ?? "").trim() || null,
@@ -105,86 +85,135 @@ export function Alpha8AddDeploymentSheet(props: {
   return (
     <WorkspaceSheet
       title="Add Deployment"
-      subtitle="Search official convention information first, then confirm it."
+      subtitle="Select an official Convention Edition or plan another kind of event."
       onClose={props.onClose}
     >
       <div className="grid gap-5">
-        <div className="rounded-2xl bg-white/[0.035] p-4">
-          <div className="text-xs font-black uppercase tracking-wider text-cyan-300">
-            Find convention
-          </div>
-          <div className="mt-3 flex gap-2">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="FurPocalypse 2026"
-              className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
-            />
-            <button
-              type="button"
-              disabled={searching || !query.trim()}
-              onClick={discover}
-              className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-50"
-            >
-              {searching ? "Searching…" : "Find"}
-            </button>
-          </div>
-          {sources.length ? (
-            <div className="mt-3 text-xs text-slate-500">
-              Sources:{" "}
-              {sources.map((source, index) => (
-                <span key={source.url}>
-                  {index ? " · " : ""}
-                  <a href={source.url} target="_blank" rel="noreferrer" className="text-cyan-300 hover:underline">
-                    {source.title}
-                  </a>
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
+        <label className="grid gap-2">
+          Deployment type
+          <select
+            value={eventType}
+            onChange={(e) => {
+              setEventType(e.target.value);
+              setFound(null);
+            }}
+            className="rounded-xl border border-white/10 bg-[#07101b] p-3"
+          >
+            <option value="convention">Convention</option>
+            <option value="public">Other Event</option>
+            <option value="meetup">Other Event · Meetup</option>
+            <option value="hosting">Other Event · Hosting</option>
+          </select>
+        </label>
+        {eventType === "convention" ? (
+          <EditionPicker selected={found} onSelect={setFound} />
+        ) : null}
 
-        <form key={JSON.stringify(found)} onSubmit={submit} className="grid gap-4">
+        <form
+          key={JSON.stringify(found)}
+          onSubmit={submit}
+          className="grid gap-4"
+        >
           <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Event name</span>
-            <input name="title" required defaultValue={found?.title ?? query} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Event name
+            </span>
+            <input
+              name="title"
+              readOnly={eventType === "convention"}
+              required
+              defaultValue={found?.name ?? ""}
+              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+            />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Starts</span>
-              <input name="start_at" type="datetime-local" required defaultValue={localDateTime(found?.start_at)} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Starts
+              </span>
+              <input
+                name="start_at"
+                readOnly={eventType === "convention"}
+                type="datetime-local"
+                required
+                defaultValue={
+                  found?.date_precision === "date_only" && found.start_at
+                    ? `${found.start_at.slice(0, 10)}T00:00`
+                    : localDateTime(found?.start_at)
+                }
+                className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              />
             </label>
             <label className="grid gap-1.5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Ends</span>
-              <input name="end_at" type="datetime-local" defaultValue={localDateTime(found?.end_at)} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Ends
+              </span>
+              <input
+                name="end_at"
+                readOnly={eventType === "convention"}
+                type="datetime-local"
+                defaultValue={
+                  found?.date_precision === "date_only" && found.end_at
+                    ? `${found.end_at.slice(0, 10)}T00:00`
+                    : localDateTime(found?.end_at)
+                }
+                className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              />
             </label>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="grid gap-1.5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">Location</span>
-              <input name="location" defaultValue={found?.location ?? ""} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                Location
+              </span>
+              <input
+                name="location"
+                readOnly={eventType === "convention"}
+                defaultValue={found?.location ?? ""}
+                className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              />
             </label>
             <label className="grid gap-1.5">
-              <span className="text-xs font-black uppercase tracking-wider text-slate-500">State</span>
-              <input name="state_code" defaultValue={found?.state_code ?? ""} placeholder="CT" className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+              <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                State
+              </span>
+              <input
+                name="state_code"
+                defaultValue={""}
+                placeholder="CT"
+                className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+              />
             </label>
           </div>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Theme</span>
-            <input name="event_theme" defaultValue={found?.event_theme ?? ""} className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Theme
+            </span>
+            <input
+              name="event_theme"
+              readOnly={eventType === "convention"}
+              defaultValue={found?.theme ?? ""}
+              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+            />
           </label>
 
           <TagInput
             name="tags"
-            defaultTags="Convention"
+            defaultTags={eventType === "convention" ? "Convention" : "Event"}
           />
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Suiting?</span>
-            <select name="suiting_mode" defaultValue="not_suiting" className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Suiting?
+            </span>
+            <select
+              name="suiting_mode"
+              defaultValue="not_suiting"
+              className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+            >
               <option value="not_suiting">Not Suiting</option>
               <option value="partialing">Partialing</option>
               <option value="fullsuiting">Fullsuiting</option>
@@ -192,17 +221,35 @@ export function Alpha8AddDeploymentSheet(props: {
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-xs font-black uppercase tracking-wider text-slate-500">Description</span>
-            <textarea name="description" defaultValue={found?.description ?? ""} className="min-h-20 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white" />
+            <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+              Description
+            </span>
+            <textarea
+              name="description"
+              defaultValue={""}
+              className="min-h-20 rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
+            />
           </label>
 
-          {error ? <div className="rounded-xl bg-red-400/10 p-3 text-sm text-red-200">{error}</div> : null}
+          {error ? (
+            <div className="rounded-xl bg-red-400/10 p-3 text-sm text-red-200">
+              {error}
+            </div>
+          ) : null}
 
           <div className="flex justify-end gap-2 border-t border-white/10 pt-4">
-            <button type="button" onClick={props.onClose} className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300">
+            <button
+              type="button"
+              onClick={props.onClose}
+              className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-black text-slate-300"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={busy} className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50">
+            <button
+              type="submit"
+              disabled={busy || (eventType === "convention" && !found)}
+              className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50"
+            >
               {busy ? "Creating…" : "Add Deployment"}
             </button>
           </div>

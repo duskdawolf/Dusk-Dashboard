@@ -1,3 +1,7 @@
+import {
+  deploymentImages,
+  type PublicEdition,
+} from "@/lib/convention-directory/model";
 import { createClient } from "@supabase/supabase-js";
 import {
   caseStudies as seedCaseStudies,
@@ -11,7 +15,13 @@ import {
   getSupabaseUrl,
   supabasePublicConfigured,
 } from "@/lib/supabase/config";
-import type { CaseStudy, ChaosArchiveItem, EventItem, Product, SocialLink } from "@/types";
+import type {
+  CaseStudy,
+  ChaosArchiveItem,
+  EventItem,
+  Product,
+  SocialLink,
+} from "@/types";
 
 function publicClient() {
   return createClient(getSupabaseUrl(), getSupabasePublishableKey(), {
@@ -25,13 +35,46 @@ export async function getEvents(): Promise<EventItem[]> {
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("events")
-    .select("*")
+    .select(
+      "id,slug,title,start_at,end_at,location,state_code,latitude,longitude,description,tag,event_type,quarter,published,convention_edition_id",
+    )
     .eq("published", true)
     .order("start_at", { ascending: true });
 
-  if (error || !data || data.length === 0) return seedEvents;
+  if (error || !data?.length) return [];
 
-  return (data as EventRow[]).map(eventRowToItem);
+  const items = (data as EventRow[]).map(eventRowToItem);
+  const editionIds = items.flatMap((e) =>
+    e.conventionEditionId ? [e.conventionEditionId] : [],
+  );
+  const [directory, featured] = await Promise.all([
+    editionIds.length
+      ? supabase
+          .from("public_convention_editions")
+          .select("*")
+          .in("id", editionIds)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("public_deployment_featured_media")
+      .select("event_id,url")
+      .in(
+        "event_id",
+        items.map((e) => e.id),
+      ),
+  ]);
+  return items.map((event) => {
+    const edition = (directory.data ?? []).find(
+      (d) => d.id === event.conventionEditionId,
+    ) as PublicEdition | undefined;
+    const image = (featured.data ?? []).find(
+      (m) => m.event_id === event.id,
+    )?.url;
+    return {
+      ...event,
+      convention: edition ?? null,
+      imageCandidates: deploymentImages(image, edition),
+    };
+  });
 }
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
@@ -87,35 +130,45 @@ export async function getCaseStudies(): Promise<CaseStudy[]> {
     .eq("published", true)
     .order("published_at", { ascending: false });
 
-  if (error || !data || data.length === 0) return seedCaseStudies;
-
-  return data.map((row) => ({
-    id: row.id,
-    slug: row.slug,
-    title: row.title,
-    image: row.image_url,
-    status: row.status,
-    challenge: row.challenge,
-    solution: row.solution,
-    outcome: row.outcome,
-    eventId: row.event_id ?? undefined,
-  }));
+  if (error || !data?.length) return [];
+  const events = await getEvents();
+  return data
+    .filter((row) => !row.event_id || events.some((e) => e.id === row.event_id))
+    .map((row) => {
+      const event = events.find((e) => e.id === row.event_id);
+      const images =
+        event?.eventType === "convention" ? event.imageCandidates : undefined;
+      return {
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        image: images?.[0] || row.image_url,
+        imageCandidates: images,
+        status: row.status,
+        challenge: row.challenge,
+        solution: row.solution,
+        outcome: row.outcome,
+        eventId: row.event_id ?? undefined,
+      };
+    });
 }
-
 
 export async function getChaosArchive(): Promise<ChaosArchiveItem[]> {
   const [events, studies] = await Promise.all([getEvents(), getCaseStudies()]);
   const studyByEventId = new Map(
     studies
       .filter((study) => study.eventId)
-      .map((study) => [study.eventId!, study] as const)
+      .map((study) => [study.eventId!, study] as const),
   );
-  const studyBySlug = new Map(studies.map((study) => [study.slug, study] as const));
+  const studyBySlug = new Map(
+    studies.map((study) => [study.slug, study] as const),
+  );
 
   if (!supabasePublicConfigured()) {
     return events
       .map((event) => {
-        const caseStudy = studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
+        const caseStudy =
+          studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
         return {
           event,
           caseStudy,
@@ -126,7 +179,8 @@ export async function getChaosArchive(): Promise<ChaosArchiveItem[]> {
       })
       .sort(
         (a, b) =>
-          new Date(b.event.startAt).getTime() - new Date(a.event.startAt).getTime()
+          new Date(b.event.startAt).getTime() -
+          new Date(a.event.startAt).getTime(),
       );
   }
 
@@ -152,20 +206,25 @@ export async function getChaosArchive(): Promise<ChaosArchiveItem[]> {
 
   return events
     .map((event) => {
-      const caseStudy = studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
+      const caseStudy =
+        studyByEventId.get(event.id) ?? studyBySlug.get(event.slug);
       const eventMedia = mediaByEvent.get(event.id) ?? [];
       const firstImage = eventMedia.find((item) => item.kind === "image");
 
       return {
         event,
         caseStudy,
-        coverImage: caseStudy?.image || firstImage?.url,
+        coverImage:
+          event.eventType === "convention"
+            ? event.imageCandidates?.[0]
+            : caseStudy?.image || firstImage?.url || event.imageCandidates?.[0],
         mediaCount: eventMedia.length,
         incidentFiled: Boolean(caseStudy),
       };
     })
     .sort(
       (a, b) =>
-        new Date(b.event.startAt).getTime() - new Date(a.event.startAt).getTime()
+        new Date(b.event.startAt).getTime() -
+        new Date(a.event.startAt).getTime(),
     );
 }

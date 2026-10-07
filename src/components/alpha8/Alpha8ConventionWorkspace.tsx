@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { DirectoryFreshnessButton } from "@/components/convention-directory/DirectoryFreshnessButton";
+import { ConventionInformation } from "@/components/convention-directory/ConventionInformation";
+import type { PublicEdition } from "@/lib/convention-directory/model";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alpha8ChaosCard } from "./Alpha8ChaosCard";
 import { Alpha8NextStopCard } from "./Alpha8NextStopCard";
@@ -28,6 +31,7 @@ type Option = {
 };
 
 type Summary = {
+  convention?: PublicEdition | null;
   prep: any;
   event: any;
   packing: any[];
@@ -142,7 +146,10 @@ export function Alpha8ConventionWorkspace() {
     const items = json.items ?? [];
     setOptions(items);
     setSelected((old) => {
-      if (forceSelect && items.some((item: Option) => item.id === forceSelect)) {
+      if (
+        forceSelect &&
+        items.some((item: Option) => item.id === forceSelect)
+      ) {
         return forceSelect;
       }
       return old || selectedFromUrl(items) || items[0]?.id || "";
@@ -400,15 +407,34 @@ export function Alpha8ConventionWorkspace() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(320px,.75fr)] lg:items-start">
         <main className="grid gap-4">
+          {summary?.convention ? (
+            <div>
+              <ConventionInformation edition={summary.convention} />
+              <DirectoryFreshnessButton
+                seriesId={summary.convention.series_id}
+                onRefreshed={refresh}
+              />
+            </div>
+          ) : event?.event_type === "convention" ? (
+            <div className="rounded-xl border border-amber-400/20 p-4 text-sm text-amber-200">
+              Convention Information awaits official directory review. Your
+              personal plans remain available.{" "}
+              <Link
+                className="underline"
+                href="/dashboard/convention-directory"
+              >
+                Open directory
+              </Link>
+            </div>
+          ) : null}
+
           <DisclosureCard
             title="Readiness"
             summary={`${readiness}% ready · ${metrics?.openTaskCount ?? 0} open tasks`}
             defaultOpen
             actions={
               <EditButton
-                onClick={() =>
-                  setEditor({ mode: "readiness", record: prep })
-                }
+                onClick={() => setEditor({ mode: "readiness", record: prep })}
               />
             }
           >
@@ -489,9 +515,7 @@ export function Alpha8ConventionWorkspace() {
                     </span>
                   ) : null}
                   <EditButton
-                    onClick={() =>
-                      setEditor({ mode: "packing", record: item })
-                    }
+                    onClick={() => setEditor({ mode: "packing", record: item })}
                   />
                 </div>
               ))}
@@ -556,16 +580,12 @@ export function Alpha8ConventionWorkspace() {
                     ) : null}
                   </div>
                   <EditButton
-                    onClick={() =>
-                      setEditor({ mode: "task", record: task })
-                    }
+                    onClick={() => setEditor({ mode: "task", record: task })}
                   />
                 </div>
               ))}
               {!summary?.tasks?.length ? (
-                <div className="text-sm text-slate-500">
-                  No prep tasks yet.
-                </div>
+                <div className="text-sm text-slate-500">No prep tasks yet.</div>
               ) : null}
             </div>
           </DisclosureCard>
@@ -616,9 +636,7 @@ export function Alpha8ConventionWorkspace() {
                     </div>
                   </div>
                   <EditButton
-                    onClick={() =>
-                      setEditor({ mode: "hotel", record: row })
-                    }
+                    onClick={() => setEditor({ mode: "hotel", record: row })}
                   />
                 </div>
               ))}
@@ -741,9 +759,7 @@ export function Alpha8ConventionWorkspace() {
                     {money(cost.amount_cents)}
                   </div>
                   <EditButton
-                    onClick={() =>
-                      setEditor({ mode: "cost", record: cost })
-                    }
+                    onClick={() => setEditor({ mode: "cost", record: cost })}
                   />
                 </div>
               ))}
@@ -757,9 +773,7 @@ export function Alpha8ConventionWorkspace() {
 
           <DisclosureCard
             title="Event Notes & Programming"
-            summary={
-              event?.appearance_mode || prep?.notes || "No notes added"
-            }
+            summary={event?.appearance_mode || prep?.notes || "No notes added"}
             actions={
               <EditButton
                 onClick={() => setEditor({ mode: "event", record: event })}
@@ -769,20 +783,14 @@ export function Alpha8ConventionWorkspace() {
             <div className="grid gap-4 text-sm leading-6 text-slate-300">
               {event?.appearance_mode ? (
                 <div>
-                  <span className="font-black text-cyan-300">
-                    Appearance:
-                  </span>{" "}
+                  <span className="font-black text-cyan-300">Appearance:</span>{" "}
                   {event.appearance_mode}
                 </div>
               ) : null}
               {prep?.notes ? (
                 <div>
-                  <span className="font-black text-cyan-300">
-                    Prep notes:
-                  </span>
-                  <div className="mt-1 whitespace-pre-wrap">
-                    {prep.notes}
-                  </div>
+                  <span className="font-black text-cyan-300">Prep notes:</span>
+                  <div className="mt-1 whitespace-pre-wrap">{prep.notes}</div>
                 </div>
               ) : null}
             </div>
@@ -804,9 +812,7 @@ export function Alpha8ConventionWorkspace() {
             <div className="flex items-center justify-between gap-3">
               <div className="text-sm font-black text-white">Quick details</div>
               <EditButton
-                onClick={() =>
-                  setEditor({ mode: "readiness", record: prep })
-                }
+                onClick={() => setEditor({ mode: "readiness", record: prep })}
               />
             </div>
             <dl className="mt-3 grid gap-3 text-xs">
@@ -830,9 +836,7 @@ export function Alpha8ConventionWorkspace() {
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Packing</dt>
-                <dd className="font-bold text-slate-200">
-                  {packingSummary}
-                </dd>
+                <dd className="font-bold text-slate-200">{packingSummary}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">Budget</dt>

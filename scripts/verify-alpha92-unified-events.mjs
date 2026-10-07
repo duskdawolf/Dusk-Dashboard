@@ -55,7 +55,7 @@ const events = fs.readFileSync(
 for (const needle of [
   "Upcoming Deployment",
   "Past Event",
-  "Open Convention Ops",
+  "Open Deployment Ops",
   "Open Case Study",
 ]) {
   if (!events.includes(needle)) {

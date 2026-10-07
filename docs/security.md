@@ -1,6 +1,6 @@
 # Security assumptions and secrets
 
-**Status: CURRENT — Alpha v31.1.** This page describes code and SQL boundaries; deployed configuration has not been inspected.
+**Status: CURRENT — Alpha v31.2.** This page describes code and SQL boundaries; deployed configuration has not been inspected.
 
 ## Authentication and authorization
 
@@ -18,7 +18,7 @@ Published-event RLS permits reading the row's columns, not only the fields the p
 
 Personal `hotel_stays`, travel, registrations, budgets, packing and tasks are planning data. Public pages should select public facts explicitly instead of serializing a deployment summary or server context. See [public deployment pages](features/public-deployment-pages.md) for the current presentation and filtering differences.
 
-Storage visibility and row visibility are separate. `public-media` and `next-stop-assets` are public buckets: hiding a database row does not revoke its object's URL. The public case-study media endpoint currently lacks a `media.published` filter. Generated image validation can also fail while the image is still persisted publicly. Do not upload private reservations, credentials or internal planning to public storage or include them in public generated images. See [Media Library](features/media-library.md) and [Next Stop](features/next-stop.md).
+Storage visibility and row visibility are separate. `public-media` and `next-stop-assets` are public buckets: hiding a database row does not revoke its object's URL. The public case-study media endpoint now checks both parent publication and `media.published`. Generated image validation can also fail while the image is still persisted publicly. Do not upload private reservations, credentials or internal planning to public storage or include them in public generated images. See [Media Library](features/media-library.md) and [Next Stop](features/next-stop.md).
 
 The [v31.1 security hotfix](../supabase/ALPHA_V31_1_SECURITY_HOTFIX_RUN_THIS.sql) pins helper function `search_path`, changes read-only readiness helpers to `SECURITY INVOKER`, and removes direct execution from `PUBLIC`, `anon` and `authenticated`, granting it to `service_role`. It requires the v31 migration. It deliberately leaves the Auth trigger function unchanged. Its presence in Git does not prove those grants are live.
 
@@ -41,3 +41,7 @@ Provider connection/test and dispatch operations can contact external services a
 | Password reauthentication grants | Legacy flow stores a SHA-256 token hash, expiry and consumption state; raw grant is returned to the caller, not persisted as plaintext |
 
 Use ignored local environment files for development and secure hosting/environment settings for deployment. Commit names and placeholder requirements only. Do not dump environments, log authorization headers, copy credentials into docs or use raw production records as fixtures. Inspect binding names and presence before requesting additional keys. Maintain TLS, artifact-integrity and package-verification checks.
+
+## Convention Directory boundary
+
+Alpha v31.2 directory administration uses central admin-role authorization; dashboard search/refresh requires an authorized operator. Internal tables/proposals/history have RLS and no anon/authenticated privileges. Service-only RPCs update normalized directory facts and create in-app notifications, never personal planning. The public edition view exposes a whitelist, with official hotels disabled by default; the featured-media view requires a published event and image. Source ingestion rejects private network addresses, unsafe URLs and cross-host redirects. Additional social sources are account-scoped. No AI or free-text web result can directly write an official edition. See [directory controls and verification](features/convention-directory.md).

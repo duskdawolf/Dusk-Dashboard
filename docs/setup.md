@@ -1,10 +1,10 @@
 # Development and deployment
 
-**Status: CURRENT — Alpha v31.1.** The repository contains a Next application and Supabase upgrade SQL, not a complete infrastructure provisioning tool.
+**Status: CURRENT — Alpha v31.2.** The repository contains a Next application and Supabase upgrade SQL, not a complete infrastructure provisioning tool.
 
 ## Local development
 
-Use Node >=20.9.0 and npm. From the existing checkout:
+Use Node 24 and npm (tested with Node 24.19.0). Directory transport uses native proxy-aware HTTPS agents, and behavior checks use Node TypeScript/module hooks. From the existing checkout:
 
 ```sh
 npm ci
@@ -17,7 +17,7 @@ npm run dev
 
 The repository tracks `next-env.d.ts`, `tsconfig.json` and `tsconfig.tsbuildinfo`. Next 16 regenerates the first two during build/development, and incremental TypeScript checking can rewrite the third. Avoid committing incidental generated changes. The supplied Codex cloud environment's saved install/start instructions use a generated runtime mirror outside the checkout and synchronize edits from the original. That helper is environment configuration, not a repository script or a second Git checkout; use the saved environment instructions where available. Do not create a worktree just for setup.
 
-For production verification, `npm run build` creates an optimized build and `npm run start` serves it. Use a generated runtime copy if tracked generated files must stay untouched. There is no configured automated test runner or CI workflow in this checkout. The structural release script does not replace page/API or database checks. `npm run lint` currently fails because it invokes `next lint`, removed by Next 16.
+For production verification, `npm run build` creates an optimized build and `npm run start` serves it. Use a generated runtime copy if tracked generated files must stay untouched. There is no CI workflow. The Alpha v31.2 verifier includes executable worker/model checks and optional isolated PostgreSQL integration tests; historical verifiers remain structural checks. `npm run lint` currently fails because it invokes `next lint`, removed by Next 16.
 
 ## Configuration
 
@@ -29,7 +29,7 @@ Use ignored `.env.local` for local development or secure environment/hosting set
 | Approved operators | `DUSK_ADMIN_EMAILS`; the central dashboard helper supports the older singular alias, but Alpha7/Next Stop helpers do not |
 | Site URLs / local time | `NEXT_PUBLIC_SITE_URL`, `DUSK_HOME_TIMEZONE`; several paths default to the production site and `America/New_York` |
 | Chaos / Next Stop / event discovery | `OPENAI_API_KEY`; model and image overrides are detailed in [Chaos](features/chaos-copilot.md) and [Next Stop](features/next-stop.md); discovery reads `OPENAI_DEPLOYMENT_DISCOVERY_MODEL` |
-| Make / unified tick | `MAKE_WEBHOOK_SECRET`; optional `AUTOMATION_TICK_SECRET` must be compatible with the child endpoints' Make-secret requirement |
+| Make / unified tick | `MAKE_WEBHOOK_SECRET`; optional `AUTOMATION_TICK_SECRET` for inbound tick; child calls use `MAKE_WEBHOOK_SECRET` |
 | Telegram | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`; optional username/thread settings |
 | X | `X_CLIENT_ID`, `X_CLIENT_SECRET`, `SOCIAL_TOKEN_ENCRYPTION_KEY`; optional text/media limits |
 | Instagram | `INSTAGRAM_APP_ID`, `INSTAGRAM_APP_SECRET`, `SOCIAL_TOKEN_ENCRYPTION_KEY`; optional `INSTAGRAM_GRAPH_VERSION` |
@@ -75,3 +75,15 @@ After the compatible v31 application is deployed, the optional [Cron activation 
 5. Enable and test AI, publishing and notification integrations only when those effects are authorized. A provider test or automation tick can send messages/publish due work. Do not use production dispatch as a generic smoke test.
 
 Documentation-only changes need link/source consistency and whitespace checks, not an application rebuild. Keep successful checks, known repository defects and untested hosted configuration distinct.
+
+## Upgrade an existing Alpha v31.1 deployment to v31.2
+
+Follow [Alpha v31.2 release notes](releases/alpha-v31.2.md). Run `ALPHA_V31_2_CONVENTION_DIRECTORY_RUN_THIS.sql` once after existing v31/v31.1 prerequisites, then deploy this application. Temporarily pause convention creation across the schema/application change. The backfill preserves events/plans, but imported catalog entries require official review before they can be selected for new conventions. Set `CONVENTION_DIRECTORY_AUTOMATION=true` only after sources are reviewed. Existing five-minute Supabase Cron can continue unchanged; no new Make job is needed. Optional development source checks require each configured official/secondary hostname in the cloud network allowlist; Supabase-only network access does not permit convention websites.
+
+```sh
+node scripts/verify-alpha-v31-2.mjs --database
+npm run typecheck -- --incremental false
+npm run build
+```
+
+The database test uses an isolated Docker Postgres 17 container with no network/ports and removes it afterward. Never run files under `scripts/fixtures/` against production.

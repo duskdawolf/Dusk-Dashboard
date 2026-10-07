@@ -120,6 +120,7 @@ const CONFIG = {
       "tag",
       "tags",
       "event_type",
+      "convention_edition_id",
       "state_code",
       "published",
       "route_visible",

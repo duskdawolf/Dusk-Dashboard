@@ -1,6 +1,6 @@
 # Deployment Ops
 
-This describes the implementation at Alpha v31.1 before Alpha v31.2 work.
+This describes the implementation at Alpha v31.2.
 Repository source establishes behavior; it does not establish which migrations,
 credentials, or cron jobs are installed in a live Supabase project.
 
@@ -42,17 +42,11 @@ deleted through this generic endpoint. Child updates/deletes also match `con_pre
 
 ## Creation and defaults
 
-[Add Deployment](../../src/components/alpha8/Alpha8AddDeploymentSheet.tsx) can discover
-convention information before submitting confirmed fields to
-[POST /api/alpha8/deployments](../../src/app/api/alpha8/deployments/route.ts).
-Discovery calls [the Alpha9 endpoint](../../src/app/api/alpha9/deployments/discover/route.ts),
-which uses OpenAI Responses with required `web_search`, a strict fact schema, and
-`OPENAI_DEPLOYMENT_DISCOVERY_MODEL` (default `gpt-5.5`). It returns editable event facts
-and up to six citation URLs. Search is optional: the form also accepts manual input,
-always sends `event_type=convention`, and saves neither the returned official URL nor
-citations or a directory reference. The directory-only Convention / Other Event
-flow is [planned for Alpha v31.2](../product-specs/alpha-v31.2-convention-directory.md).
-The creation route inserts an event with a generated slug and the authenticated owner,
+[Add Deployment](../../src/components/alpha8/Alpha8AddDeploymentSheet.tsx) offers Convention or Other Event. Convention selection searches verified editions through [the directory API](../../src/app/api/convention-directory/route.ts); the server resolves the reference and initial official facts. Other events remain manual. Both Add Deployment and read-only Convention Information support on-demand source checks. Missing editions require directory discovery/review outside Ops, not a manual convention bypass. The retained Alpha9 AI search endpoint is no longer the Add Deployment source.
+
+[Convention Information](convention-directory.md) displays official facts and multiple official hotels separately from the personal Travel, Hotel & Badge section. An unresolved migrated convention keeps its plans and displays a directory-review notice. The event editor can change its linked edition without changing official facts.
+
+The creation route insertsThe creation route inserts an event with a generated slug and the authenticated owner,
 then a prep. If prep insertion fails, it attempts to delete the newly created event.
 This route does not populate default packing, tasks, hotels, or travel records.
 The UI sends `planning`; the API accepts a supplied status, subject to database constraints.

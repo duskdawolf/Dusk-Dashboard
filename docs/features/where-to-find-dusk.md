@@ -1,6 +1,6 @@
 # Where to Find Dusk
 
-This describes the Alpha v31.1 implementation before Alpha v31.2 work.
+This describes the Where to Find Dusk implementation retained in Alpha v31.2.
 [buildWhereToFindDusk](../../src/lib/alpha31/where-to-find-dusk.ts) produces shared
 appearance lines for the operational workspace, future public deployment reports,
 and Next Stop copy. It reads persisted event/schedule inputs; it does not save a

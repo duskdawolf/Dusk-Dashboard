@@ -56,7 +56,7 @@ const workspace = fs.readFileSync(
   "src/components/alpha8/Alpha8ConventionWorkspace.tsx",
   "utf8",
 );
-if (!workspace.includes("/dashboard/con-prep/deployments?tag=")) {
+if (!workspace.includes("/dashboard/events?scope=all&tag=")) {
   console.error("Clickable tag filters missing.");
   failed = true;
 }

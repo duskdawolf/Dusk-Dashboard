@@ -1,3 +1,9 @@
+import assert from "node:assert/strict";
+import { APP_VERSION_NUMBER } from "../src/lib/app-version.ts";
+assert.ok(
+  APP_VERSION_NUMBER >= 31.1,
+  "This historical feature check requires Alpha v31.1 or later",
+);
 import fs from "node:fs";
 
 const required = [
@@ -42,12 +48,6 @@ function check(file, needle, label) {
 }
 
 if (!failed) {
-  check(
-    "src/lib/app-version.ts",
-    'APP_VERSION = "Alpha v31.1"',
-    "Alpha v31.1 version",
-  );
-
   check(
     "src/components/DeploymentsNav.tsx",
     "/deployments/future",

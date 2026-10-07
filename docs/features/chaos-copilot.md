@@ -64,7 +64,7 @@ Readiness and lifecycle fields are excluded from the event/prep allowlists.
 
 Applying planning data can trigger the database's derived readiness/lifecycle behavior;
 the model does not calculate or directly set those values. Hotel actions concern personal
-reservations, not the planned official Convention Edition hotels.
+reservations, not official Convention Edition hotels.
 
 ## Older chat, still active globally
 
@@ -120,4 +120,4 @@ so the dashboard usage card is not a complete AI spending ledger.
   before retrying; pending status checks alone do not establish concurrency safety.
 - Current proposals are AI suggestions checked by typed field filters/database constraints.
   They are not official directory verification, automatic web research, or autonomous edits.
-  Alpha v31.2's convention directory requirements remain planned in the product spec.
+  Alpha v31.2's directory is implemented separately; Copilot cannot create or verify editions. See [Convention Directory](convention-directory.md).

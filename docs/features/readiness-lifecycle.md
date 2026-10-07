@@ -1,6 +1,6 @@
 # Readiness and deployment lifecycle
 
-This records Alpha v31.1 source behavior before Alpha v31.2 changes.
+This records the readiness and lifecycle behavior retained in Alpha v31.2.
 The SQL rules below require [ALPHA_V31_DEPLOYMENT_AUTOMATION_RUN_THIS.sql](../../supabase/ALPHA_V31_DEPLOYMENT_AUTOMATION_RUN_THIS.sql)
 and the existing tables/parent columns from prior migrations. No live database
 execution or installed migration state is asserted by this document.

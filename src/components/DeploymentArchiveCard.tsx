@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { DeploymentImage } from "@/components/convention-directory/DeploymentImage";
 import Link from "next/link";
 import type { ChaosArchiveItem } from "@/types";
 
@@ -34,30 +34,21 @@ export function DeploymentArchiveCard({
       className="group overflow-hidden rounded-3xl border border-dusk-line bg-dusk-panel shadow-dusk transition hover:-translate-y-1 hover:border-dusk-aqua/35"
     >
       <div className="relative aspect-video overflow-hidden bg-[#091321]">
-        {item.coverImage ? (
-          <Image
-            src={item.coverImage}
-            alt={event.title}
-            fill
-            unoptimized={item.coverImage.startsWith("http")}
-            className="object-cover transition duration-500 group-hover:scale-[1.03]"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_center,rgba(97,232,255,.12),transparent_62%)]">
-            <div className="text-center">
-              <div className="text-5xl">🐾</div>
-              <div className="mt-2 text-xs font-black uppercase tracking-[.2em] text-slate-600">
-                {mode === "future" ? "deployment pending" : "evidence pending"}
-              </div>
-            </div>
-          </div>
-        )}
+        <DeploymentImage
+          images={
+            event.eventType === "convention"
+              ? event.imageCandidates
+              : [item.coverImage, ...(event.imageCandidates ?? [])].filter(
+                  (s): s is string => Boolean(s),
+                )
+          }
+          alt={event.title}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+        />
 
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#07101b] to-transparent p-5 pt-16">
           <span className="rounded-full border border-dusk-aqua/25 bg-[#07101b]/80 px-3 py-1 text-[11px] font-black uppercase tracking-wider text-dusk-aqua backdrop-blur">
-            {mode === "future"
-              ? "TACTICAL DEPLOYMENT PLAN"
-              : "CASE STUDY"}
+            {mode === "future" ? "TACTICAL DEPLOYMENT PLAN" : "CASE STUDY"}
           </span>
         </div>
       </div>
@@ -78,8 +69,7 @@ export function DeploymentArchiveCard({
             ? caseStudy?.outcome ||
               event.description ||
               "Historical deployment record established."
-            : event.description ||
-              "Forward deployment record established."}
+            : event.description || "Forward deployment record established."}
         </p>
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -94,9 +84,7 @@ export function DeploymentArchiveCard({
           </div>
 
           <span className="text-sm font-black text-dusk-aqua">
-            {mode === "future"
-              ? "OPEN DEPLOYMENT PLAN →"
-              : "OPEN CASE STUDY →"}
+            {mode === "future" ? "OPEN DEPLOYMENT PLAN →" : "OPEN CASE STUDY →"}
           </span>
         </div>
       </div>

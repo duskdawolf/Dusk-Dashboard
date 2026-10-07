@@ -1,6 +1,6 @@
 # System architecture and stack
 
-**Status: CURRENT — Alpha v31.1.**
+**Status: CURRENT — Alpha v31.2.**
 
 ## Runtime
 
@@ -58,3 +58,7 @@ Public repository reads use publishable/anonymous credentials and published/acti
 Dashboard APIs generally use server credentials after application authentication. PostgreSQL triggers recalculate readiness and lifecycle; the application also contains legacy readiness writers. Remote automation is an HTTP invocation of the Next application, not a process that starts automatically with `npm run dev`.
 
 Alpha is an operator-focused system. Ownership columns prepare some records for future multi-profile use; they do not establish complete tenant isolation. See [data model](data-model.md), [security](security.md) and the feature pages for exact boundaries and known discrepancies.
+
+## Alpha v31.2 directory boundary
+
+[Convention Directory](features/convention-directory.md) adds an official-data domain alongside `events` and user planning. Server-validated selection links an event to one verified edition; private Ops and public pages consume separate projections. A service-only transactional fact writer is used by admin review and the bounded automation worker. The existing tick schedules source checks/discovery. Directory writes never call planning CRUD or image-generation/publishing actions.

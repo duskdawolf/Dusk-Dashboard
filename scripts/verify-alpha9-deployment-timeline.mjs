@@ -32,7 +32,8 @@ const workspace = fs.readFileSync(
 );
 
 for (const needle of [
-  "Schedule & Where to Find Dusk",
+  "Where to Find Dusk",
+  "Alpha31WhereToFindDuskCard",
   "Alpha9SubEventsCard",
   "Fullsuiting",
 ]) {
@@ -42,14 +43,11 @@ for (const needle of [
   }
 }
 
-const prompt = fs.readFileSync(
-  "src/lib/next-stop/prompt.ts",
-  "utf8",
-);
+const prompt = fs.readFileSync("src/lib/next-stop/prompt.ts", "utf8");
 
 for (const needle of [
   "furry",
-  "furcon",
+  "convention",
   "Snapchat",
   "Instagram Story",
   "centered",

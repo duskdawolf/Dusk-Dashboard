@@ -19,10 +19,21 @@ export async function GET(
     return NextResponse.json({ items: [] }, { status: 404 });
   }
 
+  const { data: parent } = await supabase
+    .from("events")
+    .select("id")
+    .eq("id", caseStudy.event_id)
+    .eq("published", true)
+    .maybeSingle();
+  if (!parent) return NextResponse.json({ items: [] }, { status: 404 });
+
   const { data, error } = await supabase
     .from("event_media")
-    .select("id,caption_override,sort_order,featured,media:media_id(id,title,kind,url,alt_text,caption)")
+    .select(
+      "id,caption_override,sort_order,featured,media:media_id!inner(id,title,kind,url,alt_text,caption,published)",
+    )
     .eq("event_id", caseStudy.event_id)
+    .eq("media.published", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 

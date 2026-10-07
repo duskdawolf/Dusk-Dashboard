@@ -99,7 +99,7 @@ export async function applyLoadoutTemplate(
 
   for (const item of items ?? []) {
     const parentItemId = item.parent_template_item_id
-      ? idMap.get(item.parent_template_item_id) ?? null
+      ? (idMap.get(item.parent_template_item_id) ?? null)
       : null;
 
     const { data: existing } = await supabase
@@ -132,9 +132,7 @@ export async function applyLoadoutTemplate(
       .single();
 
     if (createError || !created) {
-      throw new Error(
-        createError?.message ?? `Could not add ${item.label}.`,
-      );
+      throw new Error(createError?.message ?? `Could not add ${item.label}.`);
     }
 
     idMap.set(item.id, created.id);
@@ -163,14 +161,18 @@ export async function deployCatalogConvention(args: {
     throw new Error(catalogError?.message ?? "Convention not found.");
   }
 
-  const startDate = args.startDate || catalog.start_date;
-  const endDate = args.endDate || catalog.end_date || startDate;
-
-  if (!startDate || !endDate) {
+  const { data: edition } = await supabase
+    .from("convention_editions")
+    .select("id,name,start_at,end_at,location,status")
+    .eq("legacy_catalog_id", args.catalogId)
+    .eq("verification_status", "official")
+    .maybeSingle();
+  if (!edition?.start_at || edition.status === "cancelled")
     throw new Error(
-      "This WikiFur catalog entry does not have current dates yet. Supply the convention dates to deploy it.",
+      "This catalog entry requires official Convention Directory review. Select a verified edition in Add Deployment.",
     );
-  }
+  const startDate = edition.start_at.slice(0, 10);
+  const endDate = (edition.end_at || edition.start_at).slice(0, 10);
 
   // A catalog series can be redeployed in another year. Use occurrence year in
   // the event slug and keep the catalog series separate.
@@ -179,28 +181,34 @@ export async function deployCatalogConvention(args: {
 
   const { data: existingEvent } = await supabase
     .from("events")
-    .select("id,slug")
+    .select("id,slug,owner_user_id")
     .eq("slug", eventSlug)
     .maybeSingle();
 
+  if (
+    existingEvent?.owner_user_id &&
+    existingEvent.owner_user_id !== args.userId
+  )
+    throw new Error("Forbidden");
   let eventId = existingEvent?.id ?? null;
 
   if (!eventId) {
-    const location = catalogLocation(catalog);
+    const location = edition.location;
 
     const { data: event, error: eventError } = await supabase
       .from("events")
       .insert({
         slug: eventSlug,
         owner_user_id: args.userId,
-        title: `${catalog.name.replace(/\s+\d{4}$/, "")} ${year}`,
-        start_at: catalog.starts_at || dateAtLocalNoon(startDate),
-        end_at: catalog.ends_at || `${endDate}T23:59:00Z`,
+        title: edition.name,
+        start_at: edition.start_at,
+        end_at: edition.end_at,
         location,
         description:
           "Tactical Deployment Plan created from the Dusk Convention Catalog.",
         tag: "Convention",
         event_type: "convention",
+        convention_edition_id: edition.id,
         quarter: eventQuarter(startDate),
         state_code:
           catalog.country === "USA" && catalog.region?.length <= 3
@@ -291,10 +299,7 @@ export async function deployCatalogConvention(args: {
     }
   }
 
-  const loadouts =
-    args.loadouts?.length
-      ? args.loadouts
-      : defaultLoadouts;
+  const loadouts = args.loadouts?.length ? args.loadouts : defaultLoadouts;
 
   let packingAdded = 0;
   for (const loadout of loadouts) {
@@ -318,99 +323,7 @@ export async function deployManualConvention(args: {
   endDate: string;
   location: string;
 }) {
-  const supabase = createAdminSupabaseClient();
-  const slugBase = args.name
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[^\w\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
-  const year = args.startDate.slice(0, 4);
-  const slug = `${slugBase}-${year}`;
-
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .upsert(
-      {
-        slug,
-        owner_user_id: args.userId,
-        title: `${args.name} ${year}`,
-        start_at: dateAtLocalNoon(args.startDate),
-        end_at: `${args.endDate}T23:59:00Z`,
-        location: args.location,
-        description: "Manual Tactical Deployment Plan.",
-        tag: "Convention",
-        event_type: "convention",
-        quarter: eventQuarter(args.startDate),
-        published: true,
-      },
-      { onConflict: "slug" },
-    )
-    .select("id")
-    .single();
-
-  if (eventError || !event) {
-    throw new Error(
-      eventError?.message ?? "Could not create manual convention.",
-    );
-  }
-
-  const { data: existingPrep } = await supabase
-    .from("con_preps")
-    .select("id")
-    .eq("event_id", event.id)
-    .maybeSingle();
-
-  if (existingPrep) {
-    return {
-      eventId: event.id,
-      prepId: existingPrep.id,
-      eventSlug: slug,
-      tacticalDeploymentUrl: `/chaos/${slug}`,
-    };
-  }
-
-  const { data: prep, error: prepError } = await supabase
-    .from("con_preps")
-    .insert({
-      event_id: event.id,
-      owner_user_id: args.userId,
-      status: "planning",
-      prep_deadline_at: dateAtLocalNoon(args.startDate),
-      readiness_score: 10,
-    })
-    .select("id")
-    .single();
-
-  if (prepError || !prep) {
-    throw new Error(
-      prepError?.message ?? "Could not create manual deployment.",
-    );
-  }
-
-  for (const loadout of ["con-core", "fullsuit", "hotel"]) {
-    await applyLoadoutTemplate(prep.id, loadout);
-  }
-
-  const taskRows = DEFAULT_TASKS.map((task, index) => ({
-    con_prep_id: prep.id,
-    title: task.title,
-    task_type: task.task_type,
-    due_at: dueBefore(args.startDate, task.days_before),
-    duration_minutes: task.duration_minutes,
-    status: "todo",
-    sort_order: index * 10,
-    source: "deployment-default",
-    required: true,
-    relative_days_before_departure: task.days_before,
-  }));
-
-  await supabase.from("prep_tasks").insert(taskRows);
-
-  return {
-    eventId: event.id,
-    prepId: prep.id,
-    eventSlug: slug,
-    tacticalDeploymentUrl: `/chaos/${slug}`,
-  };
+  throw new Error(
+    "Manual convention creation is unavailable. Use the official Convention Directory or Other Event in Add Deployment.",
+  );
 }

@@ -2,6 +2,9 @@ export type EventQuarter = "q1" | "q2" | "q3" | "q4";
 export type EventType = "convention" | "meetup" | "hosting" | "public";
 
 export type EventItem = {
+  conventionEditionId?: string;
+  convention?: import("@/lib/convention-directory/model").PublicEdition | null;
+  imageCandidates?: string[];
   id: string;
   slug: string;
   title: string;
@@ -35,6 +38,7 @@ export type Product = {
 };
 
 export type CaseStudy = {
+  imageCandidates?: string[];
   id: string;
   eventId?: string;
   slug: string;
@@ -67,11 +71,7 @@ export type PostStatus =
   | "published"
   | "failed";
 
-export type SocialPlatform =
-  | "telegram"
-  | "twitter"
-  | "instagram"
-  | "snapchat";
+export type SocialPlatform = "telegram" | "twitter" | "instagram" | "snapchat";
 
 export type SocialPost = {
   id: string;
@@ -94,7 +94,6 @@ export type ConPrep = {
   packingDeadline?: string;
   notes?: string;
 };
-
 
 export type ChaosArchiveItem = {
   event: EventItem;

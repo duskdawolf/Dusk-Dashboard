@@ -1,6 +1,7 @@
 import type { EventItem, EventQuarter, EventType } from "@/types";
 
 export type EventRow = {
+  convention_edition_id?: string | null;
   id: string;
   slug: string;
   title: string;
@@ -22,6 +23,7 @@ export type EventRow = {
 export function eventRowToItem(row: EventRow): EventItem {
   return {
     id: row.id,
+    conventionEditionId: row.convention_edition_id ?? undefined,
     slug: row.slug,
     title: row.title,
     startAt: row.start_at,

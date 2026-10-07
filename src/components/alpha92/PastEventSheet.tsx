@@ -1,5 +1,7 @@
 "use client";
 
+import { EditionPicker } from "@/components/convention-directory/EditionPicker";
+import type { PublicEdition } from "@/lib/convention-directory/model";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WorkspaceSheet } from "@/components/alpha8/WorkspaceSheet";
@@ -25,6 +27,8 @@ function tags(value: FormDataEntryValue | null) {
 
 export function PastEventSheet(props: { onClose: () => void }) {
   const router = useRouter();
+  const [eventType, setEventType] = useState("public");
+  const [edition, setEdition] = useState<PublicEdition | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,12 +52,12 @@ export function PastEventSheet(props: { onClose: () => void }) {
           end_at: iso(form.get("end_at")),
           location: String(form.get("location") ?? "").trim() || null,
           state_code: String(form.get("state_code") ?? "").trim() || null,
-          event_type: String(form.get("event_type") ?? "convention"),
+          event_type: eventType,
+          convention_edition_id:
+            eventType === "convention" ? edition?.id : null,
           tags: eventTags,
-          event_theme:
-            String(form.get("event_theme") ?? "").trim() || null,
-          description:
-            String(form.get("description") ?? "").trim() || null,
+          event_theme: String(form.get("event_theme") ?? "").trim() || null,
+          description: String(form.get("description") ?? "").trim() || null,
           suiting_mode: String(form.get("suiting_mode") ?? "not_suiting"),
           published: true,
         }),
@@ -77,13 +81,22 @@ export function PastEventSheet(props: { onClose: () => void }) {
       subtitle="Retroactive entry skips planning tools and starts directly as a Case Study."
       onClose={props.onClose}
     >
-      <form onSubmit={submit} className="grid gap-4">
+      <form
+        key={edition?.id || "manual"}
+        onSubmit={submit}
+        className="grid gap-4"
+      >
+        {eventType === "convention" ? (
+          <EditionPicker selected={edition} onSelect={setEdition} />
+        ) : null}
         <label className="grid gap-1.5">
           <span className="text-xs font-black uppercase tracking-wider text-slate-500">
             Event name
           </span>
           <input
             name="title"
+            readOnly={eventType === "convention"}
+            defaultValue={edition?.name || ""}
             required
             className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
           />
@@ -96,6 +109,8 @@ export function PastEventSheet(props: { onClose: () => void }) {
             </span>
             <input
               name="start_at"
+              readOnly={eventType === "convention"}
+              defaultValue={edition?.start_at?.slice(0, 16) || ""}
               type="datetime-local"
               required
               className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
@@ -107,6 +122,8 @@ export function PastEventSheet(props: { onClose: () => void }) {
             </span>
             <input
               name="end_at"
+              readOnly={eventType === "convention"}
+              defaultValue={edition?.end_at?.slice(0, 16) || ""}
               type="datetime-local"
               className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
             />
@@ -120,6 +137,8 @@ export function PastEventSheet(props: { onClose: () => void }) {
             </span>
             <input
               name="location"
+              readOnly={eventType === "convention"}
+              defaultValue={edition?.location || ""}
               className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
             />
           </label>
@@ -142,13 +161,17 @@ export function PastEventSheet(props: { onClose: () => void }) {
             </span>
             <select
               name="event_type"
-              defaultValue="convention"
+              value={eventType}
+              onChange={(e) => {
+                setEventType(e.target.value);
+                setEdition(null);
+              }}
               className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
             >
               <option value="convention">Convention</option>
               <option value="meetup">Meetup</option>
               <option value="hosting">Hosting</option>
-              <option value="public">Public event</option>
+              <option value="public">Other Event</option>
             </select>
           </label>
 
@@ -176,6 +199,8 @@ export function PastEventSheet(props: { onClose: () => void }) {
           </span>
           <input
             name="event_theme"
+            readOnly={eventType === "convention"}
+            defaultValue={edition?.theme || ""}
             className="rounded-xl border border-white/10 bg-[#07101b] px-3 py-3 text-white"
           />
         </label>
@@ -206,7 +231,7 @@ export function PastEventSheet(props: { onClose: () => void }) {
           </button>
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || (eventType === "convention" && !edition)}
             className="rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 disabled:opacity-50"
           >
             {busy ? "Creating…" : "Create Case Study"}

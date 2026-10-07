@@ -1,3 +1,9 @@
+import assert from "node:assert/strict";
+import { APP_VERSION_NUMBER } from "../src/lib/app-version.ts";
+assert.ok(
+  APP_VERSION_NUMBER >= 31,
+  "This historical feature check requires Alpha v31 or later",
+);
 import fs from "node:fs";
 
 const required = [
@@ -42,11 +48,6 @@ function contains(file, needle, label) {
 
 if (!failed) {
   contains(
-    "src/lib/app-version.ts",
-    'APP_VERSION = "Alpha v31"',
-    "Alpha v31 version",
-  );
-  contains(
     "src/lib/next-stop/prompt.ts",
     "Your job in this pass is graphic design, not illustration.",
     "simple final-render instruction",
@@ -58,8 +59,8 @@ if (!failed) {
   );
   contains(
     "src/components/alpha8/Alpha8ConventionWorkspace.tsx",
-    "55% tasks · 35% budget · 10% packing",
-    "readiness breakdown UI",
+    "prep?.readiness_score",
+    "stored readiness score remains displayed",
   );
   contains(
     "src/components/alpha8/Alpha8WorkspaceEditor.tsx",
@@ -83,7 +84,9 @@ if (!failed) {
     packingBlock.includes("counts_toward_readiness") ||
     packingBlock.includes("parent_task_id")
   ) {
-    console.error("Packing editor incorrectly contains task-only readiness fields");
+    console.error(
+      "Packing editor incorrectly contains task-only readiness fields",
+    );
     failed = true;
   } else {
     console.log("OK     task-only fields stay out of packing");

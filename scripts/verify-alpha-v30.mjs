@@ -1,3 +1,9 @@
+import assert from "node:assert/strict";
+import { APP_VERSION_NUMBER } from "../src/lib/app-version.ts";
+assert.ok(
+  APP_VERSION_NUMBER >= 30,
+  "This historical feature check requires Alpha v30 or later",
+);
 import fs from "node:fs";
 
 const required = [
@@ -40,32 +46,22 @@ function check(file, needle, label) {
 
 if (!failed) {
   check(
-    "src/lib/app-version.ts",
-    'APP_VERSION = "Alpha v30"',
-    "central version = Alpha v30",
-  );
-
-  check(
     "src/lib/next-stop/generate.ts",
     "brandConfig.secondaryMascot",
     "secondary brand reference",
   );
 
-  check(
-    "src/lib/next-stop/generate.ts",
-    "brandConfig.logo",
-    "logo reference",
-  );
+  check("src/lib/next-stop/generate.ts", "brandConfig.logo", "logo reference");
 
   check(
     "src/lib/next-stop/generate.ts",
-    'image: files',
+    "image: files",
     "multiple reference images sent for background",
   );
 
   check(
     "src/lib/next-stop/generate.ts",
-    'image: backgroundFile',
+    "image: backgroundFile",
     "saved background is sole final-poster image input",
   );
 

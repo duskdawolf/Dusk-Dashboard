@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getDashboardUser } from "@/lib/auth";
 import { ensureProfileRow } from "@/lib/profiles";
-import {
-  deployCatalogConvention,
-  deployManualConvention,
-} from "@/lib/conventions/deploy";
+import { deployCatalogConvention } from "@/lib/conventions/deploy";
 
 const CatalogSchema = z.object({
   mode: z.literal("catalog"),
@@ -23,10 +20,7 @@ const ManualSchema = z.object({
   location: z.string().min(2).max(300),
 });
 
-const Schema = z.discriminatedUnion("mode", [
-  CatalogSchema,
-  ManualSchema,
-]);
+const Schema = z.discriminatedUnion("mode", [CatalogSchema, ManualSchema]);
 
 export async function POST(request: Request) {
   const user = await getDashboardUser();
@@ -46,23 +40,23 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.mode === "manual")
+    return NextResponse.json(
+      {
+        error:
+          "Conventions require an official edition. Use Add Deployment to select Convention Directory or Other Event.",
+      },
+      { status: 400 },
+    );
+
   try {
-    const result =
-      parsed.data.mode === "catalog"
-        ? await deployCatalogConvention({
-            userId: user.id,
-            catalogId: parsed.data.catalogId,
-            startDate: parsed.data.startDate,
-            endDate: parsed.data.endDate,
-            loadouts: parsed.data.loadouts,
-          })
-        : await deployManualConvention({
-            userId: user.id,
-            name: parsed.data.name,
-            startDate: parsed.data.startDate,
-            endDate: parsed.data.endDate,
-            location: parsed.data.location,
-          });
+    const result = await deployCatalogConvention({
+      userId: user.id,
+      catalogId: parsed.data.catalogId,
+      startDate: parsed.data.startDate,
+      endDate: parsed.data.endDate,
+      loadouts: parsed.data.loadouts,
+    });
 
     return NextResponse.json({ ok: true, ...result }, { status: 201 });
   } catch (error) {

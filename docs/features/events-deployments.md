@@ -1,6 +1,6 @@
 # Events and deployments
 
-This records current Alpha v31.1 source behavior. It describes repository code and SQL, not a verified production deployment. The [Alpha v31.2 convention-directory specification](../product-specs/alpha-v31.2-convention-directory.md) is planned work.
+This records current Alpha v31.2 source behavior, not proof of hosted activation. See [Convention Directory](convention-directory.md) for official selection, legacy review, refresh and public information.
 
 ## Names and entry points
 
@@ -27,7 +27,7 @@ The [`con-prep/layout.tsx`](../../src/app/dashboard/con-prep/layout.tsx) renders
 4. Opening an upcoming event uses its existing prep, or [`POST /api/alpha92/events/[id]/ops`](../../src/app/api/alpha92/events/[id]/ops/route.ts) to ensure one. The API rejects past events and `ensureConPrep()` creates only the workspace, without packing/tasks/template seeding.
 5. Past cards open the event workspace directly; a missing retrospective can be created with its **Create Case Study** control.
 
-The older catalog flow also remains implemented: [`deployCatalogConvention()`](../../src/lib/conventions/deploy.ts) creates/reuses a year-bearing event slug, catalog-linked prep, baseline tasks and loadout copies. `deployManualConvention()` has its own defaults. These older flows have different publication, naming and initialization defaults from Alpha 8 creation.
+Convention creation requires a verified directory edition; both upcoming and past forms offer manual non-con events. The older `deployCatalogConvention()` requires a verified mapped edition before initializing its legacy defaults. `deployManualConvention()` now rejects the obsolete bypass. Existing event IDs/plans are retained by the v31.2 backfill.
 
 ## Current event API
 
@@ -88,12 +88,12 @@ The Alpha 9.2 migration creates `event_media`, backfills legacy `media.event_id`
 
 ## Public data and known limits
 
-- [`repository.ts`](../../src/lib/repository.ts) reads published events/case studies using the public Supabase client, but returns built-in seed records when unconfigured, on query errors, or on empty results. A working public page does not prove the database is healthy or populated.
+- [`repository.ts`](../../src/lib/repository.ts) reads published events/case studies using the public Supabase client, and uses seed events/case studies only when public configuration is absent. Configured empty/error queries return empty results; they do not resurrect sample deployments.
 - Public event mapping retains only the legacy `tag`, event type and quarter; archive filters use those values. Dashboard filtering uses the richer `events.tags[]`. [`dusk_sync_event_tags()`](../../supabase/V26_ALPHA91_MEDIA_TAGS_FIX_RUN_THIS.sql) cleans/sorts structured tags and synchronizes the legacy primary tag.
-- Archive cards still count/choose media via `media.event_id`; detail pages prefer `event_media`. Modern-only attachments may appear in detail while an archive card reports no media.
+- Archive media counts remain based on `media.event_id`; convention covers use the new public featured-media view and directory image fallback. Detail galleries prefer `event_media`. Modern-only attachments may appear in detail while an archive card reports no media.
 - Past public events appear in the archive even before a retrospective is published; detail then shows the pending-analysis state. `incidentFiled` indicates a returned case study, not deployment DB status.
 - Event list detail/creation/case-study operations use multiple separate queries and writes. They are not atomic; partial creation, concurrent ensure calls and inconsistent reads are possible.
 - Alpha 9.2 creates a partial case-study event uniqueness index; v31 SQL's conflict target lacks its predicate. See [data model](../data-model.md) for the conditional migration incompatibility and unverified hosted state.
 - Existing general event/case-study routes and catalog helpers have older authorization, field and initialization semantics. Changes to dates through workspace editing do not update the stored quarter like legacy event CRUD does.
 
-No v31.2 directory entities, attendance import, enrichment worker or edition/series UI is implemented by these docs. Use the [planned specification](../product-specs/alpha-v31.2-convention-directory.md) to distinguish future work.
+Alpha v31.2 implements the directory and controlled source worker; arbitrary attendance import and unstructured web scraping remain outside this release. See [Convention Directory](convention-directory.md).

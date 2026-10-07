@@ -2,7 +2,7 @@
 
 Status: **CURRENT IMPLEMENTATION**. Provider support below describes the checked-in
 code; it does not establish that production credentials, accounts, Make schedules,
-or Supabase Cron jobs are configured. Alpha v31.2 directory refreshes are planned.
+or Supabase Cron jobs are configured. Alpha v31.2 directory refreshes run through this tick when enabled; see [Convention Directory](convention-directory.md).
 
 ## Publishing model
 
@@ -73,10 +73,7 @@ uncertain send. Avoid parallel generic Make publishing for live providers.
 2. Calls sub-event reminder sweep and social dispatch in parallel.
 3. Returns 200 when all operations succeed, or 207 with per-operation results.
 
-The tick authorizes `AUTOMATION_TICK_SECRET ?? MAKE_WEBHOOK_SECRET` and forwards
-that value. Its child endpoints currently accept **only `MAKE_WEBHOOK_SECRET`**;
-omit `AUTOMATION_TICK_SECRET` or give it the same value. Distinct values produce
-child 401 responses. The tick does not run every older Make workflow.
+The tick authorizes `AUTOMATION_TICK_SECRET ?? MAKE_WEBHOOK_SECRET`; outbound reminder/social child calls now use `MAKE_WEBHOOK_SECRET` when available, so the inbound secret can differ. Directory work runs independently and reports its own result. No additional Make polling is needed. The tick does not run every older Make workflow.
 
 [Cron activation SQL](../../supabase/ALPHA_V31_ENABLE_SUPABASE_CRON_AFTER_DEPLOY.sql)
 is a separate manual operation after application deployment. It enables `pg_cron`
@@ -112,5 +109,5 @@ and the subsequent [v31.1 security hotfix](../../supabase/ALPHA_V31_1_SECURITY_H
 
 Do not put bearer secrets or provider credentials in code, documentation, logs,
 or public environment variables. Current external event upserts can change event
-fields by slug; they are not the planned directory-only refresh boundary in
+fields by slug; directory-only refreshes use a separate write boundary in
 [Alpha v31.2](../product-specs/alpha-v31.2-convention-directory.md).
