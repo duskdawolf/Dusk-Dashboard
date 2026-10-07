@@ -14,6 +14,10 @@ function fingerprint(event: RouteEvent) {
     eventTheme: event.eventTheme,
     findMeNotes: event.findMeNotes,
     appearanceMode: event.appearanceMode,
+    suitingMode:
+      typeof event.raw.suiting_mode === "string"
+        ? event.raw.suiting_mode
+        : null,
   };
 }
 
@@ -24,7 +28,7 @@ export function buildSourceHash(route: RouteContext) {
         previous: route.previous.map(fingerprint),
         current: fingerprint(route.current),
         next: route.next.map(fingerprint),
-        generator: "v26-alpha7-complete-1",
+        generator: "alpha-v30-openai-full-poster-1",
       }),
     )
     .digest("hex");

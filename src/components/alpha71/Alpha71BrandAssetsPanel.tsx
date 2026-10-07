@@ -114,7 +114,7 @@ export function Alpha71BrandAssetsPanel() {
 
   return (
     <section className="rounded-3xl border border-pink-400/20 bg-gradient-to-br from-pink-400/5 via-violet-400/5 to-cyan-300/5 p-5 md:p-6">
-      <div className="text-xs font-black uppercase tracking-[.2em] text-pink-300">v26 Alpha 7.1</div>
+      <div className="text-xs font-black uppercase tracking-[.2em] text-pink-300">Alpha v30</div>
       <h2 className="mt-1 text-2xl font-black text-white">Brand Reference Assets</h2>
       <p className="mt-2 max-w-3xl text-sm text-slate-400">
         Upload official Dusk art and the Dusk Induskries logo. Alpha 7.1 can use them as persistent brand anchors and can directly composite them into each Next Stop poster for maximum visual consistency.

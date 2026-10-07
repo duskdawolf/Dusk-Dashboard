@@ -253,7 +253,7 @@ export function Alpha8ConventionWorkspace() {
         <div className="p-5 md:p-7">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[.22em] text-cyan-300">
-              v26 Alpha 8 · Convention Ops
+              Alpha v30 · Convention Ops
             </div>
             <h1 className="mt-2 text-2xl font-black tracking-tight text-white md:text-3xl">
               Convention Workspace

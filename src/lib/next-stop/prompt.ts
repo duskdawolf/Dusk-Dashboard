@@ -1,42 +1,123 @@
 import type { BrandConfig } from "@/lib/alpha71/types";
-import type { NextStopCopy, RouteContext } from "./types";
+import { posterTextAsPromptBlock } from "./poster-content";
+import type {
+  NextStopCopy,
+  NextStopPosterText,
+  RouteContext,
+} from "./types";
 
 export const NEXT_STOP_IMAGE_SIZE = "1152x2048";
+
+function selectedReferenceDescription(brandConfig?: BrandConfig | null) {
+  const refs = [
+    brandConfig?.primaryMascot
+      ? `Reference 1 — PRIMARY DUSK ART: ${brandConfig.primaryMascot.label}`
+      : null,
+    brandConfig?.secondaryMascot
+      ? `Reference 2 — SECONDARY DUSK ART / STYLE: ${brandConfig.secondaryMascot.label}`
+      : null,
+    brandConfig?.logo
+      ? `Reference 3 — DUSK INDUSKRIES LOGO / TYPOGRAPHY: ${brandConfig.logo.label}`
+      : null,
+  ].filter(Boolean);
+
+  return refs.length
+    ? [
+        "REFERENCE IMAGES:",
+        ...refs,
+        "Use every supplied reference image for its intended role. Preserve Dusk's recognizable design and use the logo reference to understand the brand's typography/letterform energy.",
+      ]
+    : [];
+}
 
 export function buildBackgroundPrompt(
   route: RouteContext,
   copy: NextStopCopy,
   brandConfig?: BrandConfig | null,
 ) {
-  const lines = [
-    "PURPOSE: This image is promotional social-story artwork for Dusk, a furry announcing that they will be attending a furry convention / furcon. It is meant to be posted cleanly on X, Snapchat, and Instagram Story so other furries can immediately understand where Dusk is going and how to find them.",
-    "FORMAT AND HIERARCHY: Build it as a polished social Story graphic, not generic concept art. Keep the primary visual hierarchy centered on the page. The application will overlay the exact event information and How to Find Dusk schedule afterward.",
-    "Create a premium vertical 9:16 scenic background for a Dusk Induskries event-route poster.",
-    "Visual mood: dusk sky, electric aqua, cobalt blue, violet and magenta; playful furry road-trip energy; crisp polished illustration rather than generic neon wallpaper.",
-    `Current event theme: ${route.current.eventTheme || "energetic furry event"}.`,
+  return [
+    "DRAW a premium reusable 9:16 background for a social Story poster.",
+    "",
+    "PURPOSE:",
+    "Dusk is a furry announcing that they will be attending a furry convention / furry event. This background will later be edited into a finished promotional poster for X, Snapchat, and Instagram Story.",
+    "",
+    "IMPORTANT:",
+    "This request creates BACKGROUND ART ONLY. Do not render readable event copy, schedules, labels, dates, handles, fake logos, or information boxes. A later OpenAI image-edit request will use this saved background to design the complete poster and typography.",
+    "",
+    `Current event: ${route.current.title}.`,
+    `Location context: ${route.current.location || route.current.stateCode || "location not specified"}.`,
+    `Event theme: ${route.current.eventTheme || "energetic furry convention / event"}.`,
     `Creative direction: ${copy.artDirection}`,
-    "COMPOSITION: Keep the visual axis centered. The application will place three major information groups (past stops, current stop, future stops) as centered cards on the same vertical centerline. Preserve a broad centered low-detail corridor through the middle 70–80% of the canvas so these cards feel intentional rather than pasted over busy art.",
-    "Keep the strongest scenery, mascot-adjacent accents, motion trails, and paw-route decoration near the outer edges and corners. Do not place a focal face, bright moon, logo-like object, or high-detail landmark directly behind the centered information cards.",
-    "Use subtle paw-route movement from upper edge → centered middle → lower edge, but keep it subordinate to the information corridor.",
-    "TYPOGRAPHY / BRAND LANGUAGE: When the supplied reference art or logo contains distinctive lettering, use its visual language as inspiration for any NON-READABLE decorative typographic shapes in the artwork: similar weight, geometry, roundness/angularity, stroke energy, and spacing where practical. Do not invent readable words. The exact official logo and all real poster text are added later by the application.",
-    "No readable text, letters, numbers, fake convention names, labels, watermarks, fake logos, or fake signage in the generated background.",
-  ];
+    "",
+    "VISUAL DIRECTION:",
+    "Vertical 9:16 social-story composition. Dusk-sky atmosphere, electric aqua, cobalt blue, violet, magenta, polished furry-event energy. Make it feel like a purpose-built convention announcement background, not generic neon wallpaper.",
+    "Keep a strong clean visual hierarchy and enough calm areas for later typography. Center-weight the composition but allow visual interest around the edges. Pawprint-route motifs may travel from the prior-events area toward the current stop and future-events area, but keep them decorative and subordinate.",
+    "Do not draw fake cards or fake readable text. Do not invent convention signage.",
+    "",
+    ...selectedReferenceDescription(brandConfig),
+  ].join("\n");
+}
 
-  if (brandConfig?.settings?.use_brand_assets_in_next_stop && brandConfig.primaryMascot) {
-    lines.push(
-      "The supplied Dusk artwork is the canonical visual reference for Dusk: preserve its design language, palette, proportions, markings, and illustration style.",
-      brandConfig.settings?.composite_mascot
-        ? "The application will composite the exact official Dusk art afterward. Do not draw a second giant full-body Dusk. Design the scenery to frame the official mascot overlay and centered cards cleanly."
-        : "If Dusk appears in the generated artwork, preserve the reference identity closely.",
-    );
-  }
+export function buildFinalPosterPrompt(args: {
+  route: RouteContext;
+  copy: NextStopCopy;
+  text: NextStopPosterText;
+  correction?: string | null;
+}) {
+  const exactBlock = posterTextAsPromptBlock(args.text);
 
-  if (brandConfig?.logo) {
-    lines.push(
-      `The supplied logo (${brandConfig.logo.label}) is the canonical Dusk Induskries typography/branding reference. Match its overall graphic energy and typographic character where possible without reproducing fake readable text.`,
-      "Leave the configured logo corner visually quiet because the exact logo is composited afterward.",
-    );
-  }
+  const wordingRule =
+    args.text.mode === "strict"
+      ? [
+          "WORDING MODE: STRICT.",
+          "Render the supplied visible wording EXACTLY. Do not paraphrase, abbreviate, rename, omit, reorder, add, or invent visible words.",
+          "You may choose line breaks, line wrapping, font size, weight, alignment, spacing, and placement, but the visible characters/words themselves must remain unchanged.",
+        ]
+      : [
+          "WORDING MODE: CREATIVE.",
+          "You MAY rewrite, shorten, abbreviate, reorganize, or restyle the supplied copy when that improves the poster.",
+          "However, preserve every underlying fact exactly: event names, dates, times, locations, roles, suiting status, schedule details, route stops, and @duskdawolf. Do not invent any new factual claim.",
+        ];
 
-  return lines.join("\n");
+  return [
+    "EDIT the supplied image into the COMPLETE FINISHED PROMOTIONAL POSTER.",
+    "",
+    "PURPOSE:",
+    `This is a social Story graphic for Dusk, a furry, promoting that Dusk will be at ${args.route.current.title}, a furry convention / furry event.`,
+    "It is intended to be posted directly to X, Snapchat, and Instagram Story so other furries can quickly understand where Dusk is going and how to find Dusk there.",
+    "",
+    "SOURCE IMAGE:",
+    "The supplied image is the already-approved/saved Next Stop background. Treat it as the visual foundation. Do NOT replace it with unrelated artwork. You may intelligently darken, blur, mask, extend, vignette, add panels, or locally simplify parts of it when needed for readability.",
+    "This saved background is the ONLY image reference for this final-poster request. Do not assume access to earlier mascot/logo reference files.",
+    "",
+    "DESIGN THE FINISHED POSTER YOURSELF:",
+    "Do not imitate the old application-rendered cards. Create a cohesive professional graphic-design layout directly in the image.",
+    "Prefer a clean centered hierarchy suitable for a phone screen. Keep the major information groups centered or optically centered unless the background clearly demands a slightly different composition.",
+    "Make the current event the dominant focal information. Past stops and next stops should read as route context. 'How to Find Dusk' should be easy to scan.",
+    "Use polished furry-convention promotional design: expressive but readable, intentional spacing, strong typographic hierarchy, and enough contrast to survive compression on social apps.",
+    "Match the typographic/graphic language already present in the supplied background when practical.",
+    "",
+    ...wordingRule,
+    "",
+    "APP-PROVIDED POSTER COPY:",
+    "----- BEGIN COPY -----",
+    exactBlock,
+    "----- END COPY -----",
+    "",
+    "FACT LEDGER — THESE FACTS MAY NEVER CHANGE:",
+    ...args.text.factLedger.map((fact) => `- ${fact}`),
+    "",
+    "OUTPUT:",
+    "Return one finished 9:16 poster. Do not add watermarks, signatures, disclaimers, QR codes, extra handles, fake sponsors, or invented text.",
+    args.correction
+      ? [
+          "",
+          "CORRECTION PASS:",
+          "The previous render failed validation. Correct these issues while keeping the saved background as the design foundation:",
+          args.correction,
+        ].join("\n")
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
